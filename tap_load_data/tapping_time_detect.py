@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 from itertools import compress
 
 # Import own functions
-import lfpecog_features.tapping_preprocess as preprocess
-from lfpecog_features.tapping_impact_finder import find_impacts
+import tap_load_data.tapping_preprocess as preprocess
+from tap_load_data.tapping_impact_finder import find_impacts
 
 
 def pausedTapDetector(

@@ -5,7 +5,7 @@ import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
 
 # Import own functions
-from lfpecog_features.tapping_impact_finder import find_impacts
+from tap_load_data.tapping_impact_finder import find_impacts
 
 def run_preproc_acc(
     dat_arr,

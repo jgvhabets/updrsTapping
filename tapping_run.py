@@ -7,8 +7,8 @@ from itertools import compress
 from typing import Any
 
 # Import own functions
-from lfpecog_features.tapping_time_detect import updrsTapDetector
-from lfpecog_features.tapping_preprocess import run_preproc_acc, find_main_axis
+from tap_load_data.tapping_time_detect import updrsTapDetector
+from tap_load_data.tapping_preprocess import run_preproc_acc, find_main_axis
 
 
 def run_updrs_tapping(

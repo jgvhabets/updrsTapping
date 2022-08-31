@@ -12,7 +12,7 @@ from itertools import compress
 from os.path import join
 
 # Import own fucntions
-from lfpecog_features.tapping_feat_calc import aggregate_arr_fts
+from tap_extract_fts.tapping_feat_calc import aggregate_arr_fts
 
 
 def combineFeatsPerScore(
@@ -56,7 +56,11 @@ def combineFeatsPerScore(
         for i in list(ftDict.keys()):
             
             s = ftDict[i].updrsSubScore
-            tempscore = getattr(ftDict[i], ft_sel)
+            try:
+                tempscore = getattr(ftDict[i], ft_sel)
+            except AttributeError:
+                print(f'skipped {i}, no taps available')
+                continue
 
             if type(tempscore) != np.ndarray:  #float or np.float_
                 ft_per_score[s].append(tempscore)

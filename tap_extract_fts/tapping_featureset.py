@@ -5,7 +5,7 @@ Functions to define tapping features
 import numpy as np
 
 # Import own functions
-from lfpecog_features.tapping_preprocess import find_main_axis
+from tap_load_data.tapping_preprocess import find_main_axis
 
 
 def signalvectormagn(acc_arr):

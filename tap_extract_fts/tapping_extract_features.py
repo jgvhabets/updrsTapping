@@ -14,8 +14,8 @@ import numpy as np
 from dataclasses import dataclass, field
 
 # Import own custom functions
-import lfpecog_features.tapping_featureset as tap_feats
-from lfpecog_features.tapping_preprocess import find_main_axis
+import tap_extract_fts.tapping_featureset as tap_feats
+from tap_load_data.tapping_preprocess import find_main_axis
 
 @dataclass(init=True, repr=True, )
 class tapFeatures:
@@ -32,7 +32,9 @@ class tapFeatures:
         - updrsSubScore: UPDRS III Fingertapping subscore
             corresponding to acc signal, default False
         
+    TODO: Add decrement scores: e.g. mean of first 10 taps / mean last 10 taps
 
+    
     """
     triax_arr: Any
     fs: int
@@ -41,6 +43,10 @@ class tapFeatures:
     updrsSubScore: Any = False
     
     def __post_init__(self,):
+
+        if len(self.tapDict) == 0:  # no taps detected
+            return
+
         ax = find_main_axis(self.triax_arr)
         self.nTaps = len(self.impacts)
         self.freq = self.nTaps / (

@@ -14,7 +14,7 @@ import h5py
 from pandas import read_csv
 
 # Import own functions
-import lfpecog_features.tapping_preprocess as preprocess
+import tap_load_data.tapping_preprocess as preprocess
 
 
 @dataclass(init=True, repr=True, )

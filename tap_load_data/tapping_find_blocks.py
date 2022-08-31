@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from os.path import join
 
 # Import own functions
-from lfpecog_features.tapping_featureset import signalvectormagn
-from lfpecog_features.tapping_preprocess import find_main_axis
+from tap_extract_fts.tapping_featureset import signalvectormagn
+from tap_load_data.tapping_preprocess import find_main_axis
 
 def find_active_blocks(
     acc_arr, fs, buff=5, buff_thr=.1, blocks_p_sec=8,
