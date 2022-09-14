@@ -93,6 +93,7 @@ def find_active_blocks(
     )
 
     if verbose: report_detected_blocks(block_indices, fs)
+
     if to_plot: plot_blocks(
         acc_arr, block_indices, fs, 
         figsave_dir, figsave_name,

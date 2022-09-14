@@ -118,10 +118,62 @@ def matlab_import(filepath: str):
     
     try:  # try first (Matlab v until 7.3)
         acc = loadmat(filepath)
+        print(f'{filepath} imported with loadmat()')
+
     except NotImplementedError:  # for Matlab > v7.3
         acc = h5py.File(filepath, 'a')
-    
+        print(f'{filepath} imported with h5py')
+        
     return acc
+
+
+def import_meta_aDBS(
+    meta_f
+):
+    """
+    Import meta-data for JB aDBS data
+
+    Input:
+        - meta_f (str): path and string name
+    """
+
+    if meta_f[-3:] == 'csv':
+        # import csv file
+        meta = read_csv(meta_f)
+    
+    else:
+
+        print('Insert valid csv file')
+
+    # use only first number of pseudonym
+    meta['subject'] = [s[:3] for s in meta['subject']]
+
+    # ignore med-state
+    meta = meta.drop(columns=['session'], )
+
+    # merge stim info
+    stim = []
+    for row in np.arange(meta.shape[0]):
+
+        if meta.iloc[row]['preset'][:4] == 'aDbs':
+
+            stim.append(
+                meta.iloc[row]['preset']
+            )
+        
+        elif meta.iloc[row]['preset'][:4] == 'cDbs':
+
+            stim.append(
+                (
+                    f'{meta.iloc[row]["preset"]}'
+                    f'{meta.iloc[row]["stimState"]}'
+                )
+            )
+
+    meta.insert(loc=1, column='stim', value=stim)
+    meta = meta.drop(columns=['preset', 'stimState'])
+    
+    return meta
 
 
 def tap3x10_updrs_scores(

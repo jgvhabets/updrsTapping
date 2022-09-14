@@ -58,7 +58,7 @@ class tapFeatures:
         self.runRMS_ax, self.runRMS_svm = tap_feats.tap_RMS(
             self.tapDict, self.triax_arr, select='run', ax=ax,
         )
-        # ADD RUN VARIATION
+        # ADD RUN VARIATION 
         
         self.tapRMS_ax, self.tapRMS_svm = tap_feats.tap_RMS(
             self.tapDict, self.triax_arr, select='tap', ax=ax,
@@ -81,6 +81,15 @@ class tapFeatures:
         
         self.dirChange_taps = tap_feats.smallSlopeChanges(
             self.triax_arr, resolution='taps', tapDict=self.tapDict,
+        )
+
+        self.ampDecrement = tap_feats.amplitudeDecrement(
+            tapAmpFts=[
+                self.tapRMS_svm,
+                self.impactRMS_svm,
+                self.upVelo_svm
+            ],
+
         )
 
         # clear up space

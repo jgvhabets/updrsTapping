@@ -4,10 +4,7 @@ Feature calculations functions
 
 # Import public packages and functions
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import linregress, variation
-from itertools import compress
-from os.path import join
 
 def aggregate_arr_fts(
     method, arr
@@ -18,7 +15,7 @@ def aggregate_arr_fts(
     block.
     """
     assert method in [
-        'mean', 'median', 'stddev', 'sum',
+        'mean', 'median', 'stddev', 'sum', 'variance',
         'coefVar', 'trend_slope', 'trend_R'
     ], f'Inserted method "{method}" is incorrect'
 
@@ -58,8 +55,16 @@ def aggregate_arr_fts(
     elif method == 'coefVar':
 
         arr = normalize_var_fts(arr)
+        cfVar = np.nanstd(arr) / np.nanmean(arr)
+        # taking nan's into account instead of variation()
 
-        return variation(arr)
+        return cfVar
+    
+    elif method == 'variance':
+
+        arr = normalize_var_fts(arr)
+
+        return np.var(arr)
 
     elif method[:5] == 'trend':
 

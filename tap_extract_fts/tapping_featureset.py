@@ -164,6 +164,52 @@ def velo_AUC_calc(tapDict, accSig,):
     return np.array(out)
 
 
+def amplitudeDecrement(
+    tapAmpFts: list, width_sel: float=.25,
+    min_n_taps: int=10
+):
+    """
+    Sums the proportional decrement of all
+    amplitude features calculated per single-
+    tap
+
+    Inputs:
+        - list with single-tap-amp features
+        - width_sel (float): part of taps at
+            beginning and end to determine
+            decrement, default=.25
+        - min_n_taps (int): minimum amount of
+            taps present to calculate decrement
+    """
+    totalDecr = 0
+
+    # loop over arrays with amp-values
+    for ft in tapAmpFts:
+
+        n_taps = len(ft)
+
+        if n_taps < min_n_taps:
+            continue
+
+        sel_n = int(width_sel * n_taps)
+
+        startMean = np.nanmean(ft[:sel_n])
+        endMean = np.nanmean(ft[-sel_n:])
+
+        # decerement is difference between end and start
+        decr = endMean - startMean
+
+        # normalise against overall mean
+        decr = decr / np.nanmean(ft)
+
+        # sum up to total
+        totalDecr += decr
+    
+    if totalDecr == 0: totalDecr = -10
+
+    return totalDecr
+
+
 def smallSlopeChanges(
     tempacc, resolution: str, n_hop: int=1,
     tapDict = []
@@ -175,6 +221,8 @@ def smallSlopeChanges(
     the smoothest acceleration-trace and
     therefore lower numbers of small
     slope changes
+
+    PM: TODO: divide by sample freq to norm for diff Fs
 
     Inputs:
         - acc (array): tri-axial acceleration
