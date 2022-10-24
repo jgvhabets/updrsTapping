@@ -12,5 +12,10 @@ Work in Progress: data analysis ongoing.
 ### Requirements:
 
 #### Python:
+environment installation:
+<c>conda create --name updrsTapping python=3.9 jupyter pandas scipy numpy matplotlib statsmodels seaborn scikit-learn h5py</c>
+
+additional installed packages:
+<c>pip install mne</c> (for working with raw .poly5 files, e.g. via TMSI-amplifier)
 
 #### Matlab:
