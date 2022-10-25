@@ -33,7 +33,7 @@ def resample(
         data arrays as input data, however downsampled
         and therefore less datapoints per window
     """
-    down = Fs_orig / Fs_new  # factor to down sample
+    down = int(Fs_orig / Fs_new)  # factor to down sample
 
     newdata = resample_poly(
         data, up=1, down=down, axis=-1

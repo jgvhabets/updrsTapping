@@ -92,6 +92,10 @@ def find_active_blocks(
         acc_arr, block_indices
     )
 
+    acc_blocks, block_indices = select_on_block_length(
+        acc_blocks, block_indices, fs=fs
+    )
+
     if verbose: report_detected_blocks(block_indices, fs)
 
     if to_plot: plot_blocks(
@@ -220,6 +224,41 @@ def convert_sample_ind_2_acc_arrays(
 
     return acc_blocks
 
+def select_on_block_length(
+    acc_blocks, block_indices, fs,
+    min_block_length_sec=4,
+    max_block_length_sec=None,
+):
+    """
+    Select blocks with appropriate block-lengths
+    """
+    # find blocks with too long length
+    to_del = []
+
+    for i in np.arange(len(block_indices['start'])):
+        
+        length = (block_indices['end'][i] - 
+                  block_indices['start'][i]) / fs
+
+        if length < min_block_length_sec: to_del.append(i)
+
+    # select the blocks and indices based on the found indices
+    sel_blocks = [
+        block for i, block in enumerate(acc_blocks)
+        if i not in to_del
+    ]
+    sel_indices = {}
+    for time in ['start', 'end']:
+        
+        sel_indices[time] = [
+            indx for i, indx in enumerate(block_indices[time])
+            if i not in to_del
+        ]
+    
+    print(f'deleted blocks: {to_del}')
+
+    return sel_blocks, sel_indices
+
 
 def report_detected_blocks(block_indices, fs):
     """
@@ -228,6 +267,7 @@ def report_detected_blocks(block_indices, fs):
     """
     block_lengths = []
     for b in np.arange(len(block_indices['start'])):
+        
         block_lengths.append(
             (block_indices['end'][b] - 
             block_indices['start'][b]) / fs
@@ -244,6 +284,7 @@ def plot_blocks(
     """
     Plots overview of selected blocks and main axes
     """
+    print(f'plotting {figsave_name}...')
     mainax = find_main_axis(acc_arr)
     otheraxes = [0, 1, 2]
     otheraxes.remove(mainax)
