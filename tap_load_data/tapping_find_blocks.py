@@ -156,15 +156,7 @@ def merge_close_blocks(
             start = block_indices['start'][win + 1]
         
         except IndexError:  # in case of last current block
-        #     # if skip_next: continue
-        #     # else:
-        #     #     new_block_indices['start'].append(
-        #     #         block_indices['start'][win]
-        #     #     )
-        #     #     new_block_indices['end'].append(
-        #     #         block_indices['end'][win]
-        #     #     )
-        #     #     continue
+
             if not ongoing:
                 i_start = block_indices['start'][win]  # no existing i-start
                 print(f'\n\nsetting start ({i_start}) for LAST BLOCK')
@@ -175,12 +167,6 @@ def merge_close_blocks(
             new_block_indices['start'].append(i_start)
             new_block_indices['end'].append(i_end)
             
-        #     else:
-        #         print('WHYYYY')
-        #         print(win, len(block_indices['start']))
-        # # if skip_next:
-        #     skip_next = False
-        #     continue
 
         if (start - end) < min_distance:
             # start (win n+1) vs end (win n)
@@ -192,14 +178,6 @@ def merge_close_blocks(
                 ongoing = True
                 mergecount += 1
             
-            # new_block_indices['start'].append(
-            #     block_indices['start'][win]
-            # )
-            # new_block_indices['end'].append(
-            #     block_indices['end'][win + 1]
-            # )
-            # mergecount += 1
-            # skip_next = True
 
         else:  # next block too far away -> close current/ongoing block
             # if only this block is taken, take current i-start
@@ -212,12 +190,6 @@ def merge_close_blocks(
 
             ongoing = False
 
-            # new_block_indices['start'].append(
-            #     block_indices['start'][win]
-            # )
-            # new_block_indices['end'].append(
-            #     block_indices['end'][win]
-            # )
     # if verbose: print(f'Blocks merged: {mergecount}')
 
     return new_block_indices
