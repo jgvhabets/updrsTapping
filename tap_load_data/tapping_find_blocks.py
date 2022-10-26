@@ -7,6 +7,7 @@ Function to detect continuous tapping blocks
 import numpy as np
 import matplotlib.pyplot as plt
 from os.path import join
+from pandas import DataFrame
 
 # Import own functions
 from tap_extract_fts.tapping_featureset import signalvectormagn
@@ -15,7 +16,9 @@ from tap_load_data.tapping_preprocess import find_main_axis
 def find_active_blocks(
     acc_arr, fs, buff=5, buff_thr=.1, blocks_p_sec=8,
     act_wins_for_block=2, to_plot=True, verbose=True,
+    to_store_csv=False, csv_dir: str='', csv_fname: str='',
     figsave_dir: str='', figsave_name: str='',
+    plot_orig_fname: str = '',
 ):
     """
     Detects tapping blocks in triaxial acc array.
@@ -50,13 +53,16 @@ def find_active_blocks(
     thresh = np.nanstd(sig) * .5
 
     winl = int(fs / blocks_p_sec)
+
     # activity per window (acc > std.dev)
     act = np.array([sum(sig[i_start:i_start + winl] > thresh) / winl for
         i_start in np.arange(0, sig.shape[0], winl)])
+    
     # blocks of windows with sufficient activity
     blocks = [sum(
         act[i_start - buff:i_start + buff] > buff_thr
     ) > act_wins_for_block for i_start in np.arange(buff, len(act) - buff)]
+    
     # finding start and end indices of blocks
     block_indices = {'start': [], 'end': []}
     block_active = False
@@ -101,6 +107,11 @@ def find_active_blocks(
     if to_plot: plot_blocks(
         acc_arr, block_indices, fs, 
         figsave_dir, figsave_name,
+        plot_orig_fname,
+    )
+
+    if to_store_csv: save_block_csv(
+        acc_blocks, fs, csv_dir, csv_fname,
     )
 
     return acc_blocks, block_indices
@@ -154,7 +165,7 @@ def merge_close_blocks(
             new_block_indices['end'].append(
                 block_indices['end'][win]
             )
-    if verbose: print(f'Blocks merged: {mergecount}')
+    # if verbose: print(f'Blocks merged: {mergecount}')
 
     return new_block_indices
 
@@ -277,9 +288,28 @@ def report_detected_blocks(block_indices, fs):
             f'ted, lengths (in sec): {block_lengths}')
 
 
+def save_block_csv(
+    acc_blocks, fs, csv_dir, csv_fname,
+):
+    """
+    Store csv-files per blocks
+    """
+    for n, block_arr in enumerate(acc_blocks):
+
+        storeData = DataFrame(
+            block_arr.T, columns=['X', 'Y', 'Z'])
+
+        fname = csv_fname + f'_block{n + 1}_{fs}Hz.csv'
+
+        storeData.to_csv(join(csv_dir, fname))
+
+        print(f'saved block {n}: {fname} @ {csv_dir}')
+
+
 def plot_blocks(
     acc_arr, block_indices, fs, 
     figsave_dir, figsave_name,
+    plot_orig_fname,
 ):
     """
     Plots overview of selected blocks and main axes
@@ -322,6 +352,14 @@ def plot_blocks(
         frameon=False, fontsize=16,
         ncol=4, loc='lower center'
     )
+
+    if len(plot_orig_fname) > 1:
+        plt.suptitle(
+            plot_orig_fname, x=.05, y=.97,
+            ha='left', size=16,
+            color='gray', alpha=.8,)
+
+    plt.tight_layout()
     plt.savefig(
         join(figsave_dir, figsave_name),
         dpi=150, facecolor='w',

@@ -22,10 +22,7 @@ def run_preproc_acc(
     Input:
         - 
     """
-    # if len(dat_arr.shape) == 1:
-    #     temp = np.zeros((1, dat_arr.shape[0]))
-    #     temp[0, :] = dat_arr
-    #     dat_arr = temp
+    
 
     # print('start preprocess')
     main_ax_index = find_main_axis(dat_arr)

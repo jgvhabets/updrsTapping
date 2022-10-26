@@ -6,6 +6,7 @@ from command line
 
 
 # import public packages
+import json
 import os
 import sys
 from dataclasses import field, dataclass
@@ -25,36 +26,6 @@ proj_dir = utils_dataManagement.get_proj_dir()
 
 
 @dataclass(init=True, repr=True)
-class triAxial:
-    """
-    Select accelerometer keys
-
-    TODO: add Cfg variable to indicate
-    user-specific accelerometer-key
-    """
-    data: array
-    key_indices: dict
-
-    def __post_init__(self,):
-
-        try:
-            self.left = self.data[
-                self.key_indices['L_X']:
-                self.key_indices['L_Z'] + 1
-            ]
-        except KeyError:
-            print('No left indices')
-
-        try:
-            self.right = self.data[
-                self.key_indices['R_X']:
-                self.key_indices['R_Z'] + 1
-            ]
-        except KeyError:
-            print('No right indices')
-
-
-@dataclass(init=True, repr=True)
 class rawAccData:
     """
     """
@@ -63,6 +34,8 @@ class rawAccData:
     uncut_path: str
     joker_string: Any = None
     goal_fs: int = 250
+    sub_csv_code: str = 'BER'
+    unilateral_coding_list: list = field(default_factory=lambda: ['LHAND', 'RHAND'])
 
     def __post_init__(self,):
         
@@ -72,14 +45,25 @@ class rawAccData:
             joker_string=self.joker_string
         )
         print(f'files selected: {sel_files}')
+        
+        # Abort if not file found
+        if len(sel_files) == 0:
+            return print(f'No files found for {self.sub} {self.state}')
 
         for f in sel_files:
 
             self.raw = tmsi_poly5reader.Poly5Reader(
                 os.path.join(self.uncut_path, f)
             )
+            hand_code = 'bilat'
+            # check if file contains unilateral data
+            for code in self.unilateral_coding_list:
+                if code.upper() in f.upper():
+                    hand_code = code.upper()
+
+
             key_ind_dict = utils_dataManagement.get_arr_key_indices(
-                self.raw.ch_names
+                self.raw.ch_names, hand_code
             )
             if len(key_ind_dict) == 0:
                 print(f'No ACC-keys found in keys: {self.raw.ch_names}')
@@ -88,82 +72,63 @@ class rawAccData:
             print(key_ind_dict)
 
             # select only present acc (aux) variables
-            temp_data = triAxial(
+            file_data_class = utils_dataManagement.triAxial(
                 data=self.raw.samples,
                 key_indices=key_ind_dict,
             )
 
-            # resampling before acc-selection was here
-
-            # self.data = triAxial(
-            #     data=temp_data,
-            #     key_indices=key_ind_dict,
-            # )
-
-            for acc_side in vars(temp_data).keys():
+            for acc_side in vars(file_data_class).keys():
 
                 if acc_side in ['left', 'right']:
 
                     if self.raw.sample_rate > self.goal_fs:
-
+                        # resample if necessary
                         setattr(
-                            temp_data,
+                            file_data_class,
                             acc_side,
                             utils_preprocessing.resample(
-                                getattr(temp_data, acc_side),
+                                getattr(file_data_class, acc_side),
                                 Fs_orig=self.raw.sample_rate,
                                 Fs_new=self.goal_fs
                             )
                         )
-
+                    
+                    # preprocess data in class
+                    procsd_arr, _ = preproc.run_preproc_acc(
+                        dat_arr=getattr(file_data_class, acc_side),
+                        fs=self.goal_fs,
+                        to_detrend=True,
+                        to_check_magnOrder=True,
+                        to_check_polarity=False,
+                    )
+                    # replace arr in class with processed data
                     setattr(
-                        temp_data,
+                        file_data_class,
                         acc_side,
-                        preproc.run_preproc_acc(
-                            getattr(temp_data, acc_side),
-                            fs=self.goal_fs,
-                            to_detrend=True,
-                            to_check_magnOrder=True,
-                            to_check_polarity=False,
-                        )
+                        procsd_arr
                     )
 
-                    # main_ax_i = preproc.find_main_axis(
-                    #     getattr(temp_data, acc_side)
-                    # )
-
-                    # setattr(
-                    #     temp_data,
-                    #     acc_side,
-                    #     preproc.check_order_magnitude(
-                    #         getattr(temp_data, acc_side),
-                    #         main_ax_i,
-                    #     )
-                    # )
-
-                    # setattr(
-                    #     temp_data,
-                    #     acc_side,
-                    #     preproc.detrend_bandpass(
-                    #         getattr(temp_data, acc_side),
-                    #         fs=self.goal_fs,
-                    #     )
-                    # )
-
-                    self.data = temp_data
+                    self.data = file_data_class  # store in class to work with in notebook
 
                     temp_acc, temp_ind = find_blocks.find_active_blocks(
-                        acc_arr=getattr(temp_data, acc_side),
+                        acc_arr=getattr(file_data_class, acc_side),
                         fs=self.goal_fs,
                         verbose=True,
                         to_plot=True,
+                        plot_orig_fname=f,
                         figsave_dir=os.path.join(
                             proj_dir, 'figures', 'testRepo'
                         ),
                         figsave_name=(
-                            f'{self.sub}_{self.state}'
-                            f'{acc_side}_blocks_detected'
-                        )
+                            f'{self.sub}_{self.state}_'
+                            f'{acc_side[0].upper()}_blocks_detected'
+                        ),
+                        to_store_csv=True,
+                        csv_dir=os.path.join(
+                            proj_dir, 'data', 'tap_block_csvs'
+                        ),
+                        csv_fname=f'{self.sub_csv_code}{self.sub}_'
+                                  f'{self.state}_{acc_side[0].upper()}',
                     )
 
 
@@ -175,11 +140,34 @@ if __name__ == '__main__':
     # only executes following code when called via
     # command line, not when loaded in, in another
     # script
-    raw = rawAccData(
-        sub=sys.argv[1],
-        state=sys.argv[2],
-        uncut_path=sys.argv[3],
-    )
+    
+    # check for given subs and states
+    try:
+
+        with open(sys.argv[1], 'r') as json_data:
+    
+            cfg = json.load(json_data)
+
+        for sub in cfg['subs_states'].keys():
+
+            print(f'\nSTART SUB {sub}')
+
+            for state in cfg['subs_states'][sub]:
+                print(f'\n\tSTART {sub}')
+
+                rawAccData(
+                    sub=sub,
+                    state=state,
+                    uncut_path=cfg['uncut_path'],
+                )
+    
+    except:
+        print(type(sys.argv[1]))
+        rawAccData(
+            sub=sys.argv[1],
+            state=sys.argv[2],
+            uncut_path=sys.argv[3],
+        )
 
 
 
