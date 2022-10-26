@@ -5,6 +5,7 @@ ReTap-Toolbox
 
 # import public packages and functions
 import os
+from sys import platform
 import numpy as np
 from dataclasses import dataclass
 from array import array
@@ -27,6 +28,34 @@ def get_proj_dir():
     return proj_dir
 
 
+def find_stored_data_path():
+
+    if platform == 'win32':
+        
+        path = os.getcwd()
+        while os.path.dirname(path)[-5:] != 'Users':
+            lastpath = path
+            path = os.path.dirname(path)
+        # path is now Users/username
+        onedrive_f = [
+            f for f in os.listdir(path) if np.logical_and(
+                'onedrive' in f.lower(),
+                'charit' in f.lower()
+            ) 
+        ]
+        onedrivepath = os.path.join(path, onedrive_f[0])
+        uncut_path = os.path.join(
+            onedrivepath, 'ReTap', 'data', 'BER', 'UNCUT'
+        )
+
+
+    elif platform == 'darwin':
+
+        print('create Python equivalent')
+    
+    return uncut_path
+
+
 def get_file_selection(
     path, sub, state,
     joker_string = None
@@ -35,10 +64,11 @@ def get_file_selection(
         
     for f in os.listdir(path):
 
-        if np.logical_and(
-            f'sub{sub}' not in f.lower(),
-            f'sub{sub[1:]}' not in f.lower(),
-        ): continue
+        if not np.array([
+            f'sub{sub}' in f.lower() or
+            f'sub{sub[1:]}' in f.lower() or
+            f'sub-{sub}' in f.lower()
+        ]).any(): continue
 
         if type(joker_string) == str:
 
@@ -46,7 +76,7 @@ def get_file_selection(
 
                 continue
 
-        if state in f:
+        if state.lower() in f.lower():
 
             sel_files.append(f)
     
@@ -56,9 +86,10 @@ def get_file_selection(
 def get_arr_key_indices(ch_names, hand_code):
 
     dict_out = {}
-
+    print(f'HANDCODE {hand_code}')
     if hand_code == 'bilat':
         
+        side = 'bilat'
         aux_keys = [
             'L_X', 'L_Y', 'L_Z',
             'R_X', 'R_Y', 'R_Z'
@@ -66,12 +97,17 @@ def get_arr_key_indices(ch_names, hand_code):
     
     else:
 
-        if 'L' in hand_code: side = 'L'
-        elif 'R' in hand_code: side = 'R'
+        if 'L' in hand_code:
+            S = 'L'
+            side = 'left'
+        elif 'R' in hand_code:
+            S = 'R'
+            side = 'right'
 
         aux_keys = [
-            f'{side}_X', f'{side}_Y', f'{side}_Z'
+            f'{S}_X', f'{S}_Y', f'{S}_Z'
         ]
+
     
     aux_count = 0
 
@@ -89,16 +125,12 @@ def get_arr_key_indices(ch_names, hand_code):
         
         elif 'aux' in key.lower():
 
+            if 'iso' in key.lower(): continue
+
             dict_out[aux_keys[aux_count]] = i
             aux_count += 1
-    
-    
 
-
-        
-
-
-    return dict_out
+    return dict_out, side
 
 
 @dataclass(init=True, repr=True)

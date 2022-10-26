@@ -66,13 +66,14 @@ class rawAccData:
                 if code.upper() in f.upper():
                     hand_code = code.upper()
 
-            key_ind_dict = utils_dataManagement.get_arr_key_indices(
+            key_ind_dict, file_side = utils_dataManagement.get_arr_key_indices(
                 self.raw.ch_names, hand_code
             )
             if len(key_ind_dict) == 0:
                 print(f'No ACC-keys found in keys: {self.raw.ch_names}')
                 continue
             print(key_ind_dict)
+            print(self.raw.ch_names)
 
             # select present acc (aux) variables
             file_data_class = utils_dataManagement.triAxial(
@@ -83,6 +84,9 @@ class rawAccData:
             for acc_side in vars(file_data_class).keys():
 
                 if acc_side in ['left', 'right']:
+                    # prevent left-calculations on right-files and viaversa
+                    if hand_code != 'bilat':
+                        if acc_side != file_side: continue
                     # PREPROCESS
                     
                     # resample if necessary
@@ -104,6 +108,7 @@ class rawAccData:
                         to_detrend=True,
                         to_check_magnOrder=True,
                         to_check_polarity=True,
+                        to_remove_outlier=False,
                     )
                     # replace arr in class with processed data
                     setattr(
@@ -121,7 +126,7 @@ class rawAccData:
                         to_plot=True,
                         plot_orig_fname=f,
                         figsave_dir=os.path.join(
-                            proj_dir, 'figures', 'testRepo'
+                            proj_dir, 'figures', 'tap_block_plots'
                         ),
                         figsave_name=(
                             f'{self.sub}_{self.state}_'
@@ -145,33 +150,35 @@ if __name__ == '__main__':
     # command line, not when loaded in, in another
     # script
     
+    uncut_path = utils_dataManagement.find_stored_data_path()
+
     # check for given subs and states
-    try:
+    # try:
 
-        with open(sys.argv[1], 'r') as json_data:
+    with open(sys.argv[1], 'r') as json_data:
+
+        cfg = json.load(json_data)
+
+    for sub in cfg['subs_states'].keys():
+
+        print(f'\nSTART SUB {sub}')
+
+        for state in cfg['subs_states'][sub]:
+            print(f'\n\tSTART {state}')
+
+            rawAccData(
+                sub=sub,
+                state=state,
+                uncut_path=uncut_path,
+            )
     
-            cfg = json.load(json_data)
-
-        for sub in cfg['subs_states'].keys():
-
-            print(f'\nSTART SUB {sub}')
-
-            for state in cfg['subs_states'][sub]:
-                print(f'\n\tSTART {sub}')
-
-                rawAccData(
-                    sub=sub,
-                    state=state,
-                    uncut_path=cfg['uncut_path'],
-                )
-    
-    except:
-        print(type(sys.argv[1]))
-        rawAccData(
-            sub=sys.argv[1],
-            state=sys.argv[2],
-            uncut_path=sys.argv[3],
-        )
+    # except:
+    #     print(type(sys.argv[1]))
+    #     rawAccData(
+    #         sub=sys.argv[1],
+    #         state=sys.argv[2],
+    #         uncut_path=uncut_path,
+    #     )
 
 
 
