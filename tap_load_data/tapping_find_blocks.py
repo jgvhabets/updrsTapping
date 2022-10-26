@@ -14,7 +14,7 @@ from tap_extract_fts.tapping_featureset import signalvectormagn
 from tap_load_data.tapping_preprocess import find_main_axis
 
 def find_active_blocks(
-    acc_arr, fs, buff=5, buff_thr=.1, blocks_p_sec=8,
+    acc_arr, fs, buff=5, buff_thr=.3, blocks_p_sec=8,
     act_wins_for_block=2, to_plot=True, verbose=True,
     to_store_csv=False, csv_dir: str='', csv_fname: str='',
     figsave_dir: str='', figsave_name: str='',
@@ -51,6 +51,9 @@ def find_active_blocks(
     """
     sig = signalvectormagn(acc_arr)
     thresh = np.nanstd(sig) * .5
+    print(
+        f'\n\nACT THRESH. {thresh}\n\n'
+    )
 
     winl = int(fs / blocks_p_sec)
 
@@ -79,12 +82,12 @@ def find_active_blocks(
             else:
                 continue
 
-    for rep in range(8):
-        block_indices = merge_close_blocks(
-            block_indices=block_indices,
-            min_distance=blocks_p_sec * 2,
-            verbose=verbose
-        )
+    # for rep in range(8):
+    block_indices = merge_close_blocks(
+        block_indices=block_indices,
+        min_distance=blocks_p_sec * 2,
+        verbose=verbose
+    )
 
     block_indices = convert_win_ind_2_sample_ind(
         block_indices=block_indices, fs=fs, winl=winl,
@@ -124,47 +127,97 @@ def merge_close_blocks(
     Merges blocks with a too small distance to
     each other. Blocks are still expreseed in windows,
     not yet in samples.
+
+    Input:
+        - block_indices: list with lists of starting and
+            ending indices of detected blocks
+        - min_distance: blocks which are lesser than
+            this time-distance separated will be merged
+    
+    Returns:
+        - new_block_indices: containing new starts and end
+            indices in two lists
     """
     new_block_indices = {'start': [], 'end': []}
 
     mergecount = 0
-    skip_next = False
+    # skip_next = False
 
+    ongoing = False
+
+    # print(
+    #     f'\n\n{block_indices}\n\n'
+    # )
     for win, end in enumerate(block_indices['end']):
+        # start with end-index
+        # try:
+            # take start index of next block (if end not from the last block)
         try:
             start = block_indices['start'][win + 1]
-        except IndexError:
-            if skip_next: continue
-            else:
-                new_block_indices['start'].append(
-                    block_indices['start'][win]
-                )
-                new_block_indices['end'].append(
-                    block_indices['end'][win]
-                )
-                continue
+        
+        except IndexError:  # in case of last current block
+        #     # if skip_next: continue
+        #     # else:
+        #     #     new_block_indices['start'].append(
+        #     #         block_indices['start'][win]
+        #     #     )
+        #     #     new_block_indices['end'].append(
+        #     #         block_indices['end'][win]
+        #     #     )
+        #     #     continue
+            if not ongoing:
+                i_start = block_indices['start'][win]  # no existing i-start
+                print(f'\n\nsetting start ({i_start}) for LAST BLOCK')
+            # include last block
+            
+            i_end = block_indices['end'][win]
+            print('add last block', i_start, i_end)
+            new_block_indices['start'].append(i_start)
+            new_block_indices['end'].append(i_end)
+            
+        #     else:
+        #         print('WHYYYY')
+        #         print(win, len(block_indices['start']))
+        # # if skip_next:
+        #     skip_next = False
+        #     continue
 
-        if skip_next:
-            skip_next = False
-            continue
+        if (start - end) < min_distance:
+            # start (win n+1) vs end (win n)
+            # too short -> block is not closed and stored
 
-        elif (start - end) < min_distance:        
-            new_block_indices['start'].append(
-                block_indices['start'][win]
-            )
-            new_block_indices['end'].append(
-                block_indices['end'][win + 1]
-            )
-            mergecount += 1
-            skip_next = True
+            if not ongoing:
+                # save start-index from current block for new block later to store 
+                i_start = block_indices['start'][win]
+                ongoing = True
+                mergecount += 1
+            
+            # new_block_indices['start'].append(
+            #     block_indices['start'][win]
+            # )
+            # new_block_indices['end'].append(
+            #     block_indices['end'][win + 1]
+            # )
+            # mergecount += 1
+            # skip_next = True
 
-        else:
-            new_block_indices['start'].append(
-                block_indices['start'][win]
-            )
-            new_block_indices['end'].append(
-                block_indices['end'][win]
-            )
+        else:  # next block too far away -> close current/ongoing block
+            # if only this block is taken, take current i-start
+            if not ongoing: i_start = block_indices['start'][win]
+            # take current i-end too close the block
+            i_end = block_indices['end'][win]
+
+            new_block_indices['start'].append(i_start)
+            new_block_indices['end'].append(i_end)
+
+            ongoing = False
+
+            # new_block_indices['start'].append(
+            #     block_indices['start'][win]
+            # )
+            # new_block_indices['end'].append(
+            #     block_indices['end'][win]
+            # )
     # if verbose: print(f'Blocks merged: {mergecount}')
 
     return new_block_indices
@@ -237,7 +290,7 @@ def convert_sample_ind_2_acc_arrays(
 
 def select_on_block_length(
     acc_blocks, block_indices, fs,
-    min_block_length_sec=4,
+    min_block_length_sec=3,
     max_block_length_sec=None,
 ):
     """
