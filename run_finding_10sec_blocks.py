@@ -35,7 +35,12 @@ class rawAccData:
     joker_string: Any = None
     goal_fs: int = 250
     sub_csv_code: str = 'BER'
-    unilateral_coding_list: list = field(default_factory=lambda: ['LHAND', 'RHAND'])
+    unilateral_coding_list: list = field(
+        default_factory=lambda: [
+            'LHAND', 'RHAND',
+            'FTL', 'FTR',
+        ]
+    )
 
     def __post_init__(self,):
         # IDENTIFY FILES TO PROCESS
