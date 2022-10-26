@@ -38,7 +38,7 @@ class rawAccData:
     unilateral_coding_list: list = field(default_factory=lambda: ['LHAND', 'RHAND'])
 
     def __post_init__(self,):
-        
+        # IDENTIFY FILES TO PROCESS
         sel_files = utils_dataManagement.get_file_selection(
             path=self.uncut_path,
             sub=self.sub, state=self.state,
@@ -51,7 +51,7 @@ class rawAccData:
             return print(f'No files found for {self.sub} {self.state}')
 
         for f in sel_files:
-
+            # LOAD FILE
             self.raw = tmsi_poly5reader.Poly5Reader(
                 os.path.join(self.uncut_path, f)
             )
@@ -61,17 +61,15 @@ class rawAccData:
                 if code.upper() in f.upper():
                     hand_code = code.upper()
 
-
             key_ind_dict = utils_dataManagement.get_arr_key_indices(
                 self.raw.ch_names, hand_code
             )
             if len(key_ind_dict) == 0:
                 print(f'No ACC-keys found in keys: {self.raw.ch_names}')
                 continue
-            
             print(key_ind_dict)
 
-            # select only present acc (aux) variables
+            # select present acc (aux) variables
             file_data_class = utils_dataManagement.triAxial(
                 data=self.raw.samples,
                 key_indices=key_ind_dict,
@@ -80,9 +78,10 @@ class rawAccData:
             for acc_side in vars(file_data_class).keys():
 
                 if acc_side in ['left', 'right']:
-
+                    # PREPROCESS
+                    
+                    # resample if necessary
                     if self.raw.sample_rate > self.goal_fs:
-                        # resample if necessary
                         setattr(
                             file_data_class,
                             acc_side,
@@ -99,7 +98,7 @@ class rawAccData:
                         fs=self.goal_fs,
                         to_detrend=True,
                         to_check_magnOrder=True,
-                        to_check_polarity=False,
+                        to_check_polarity=True,
                     )
                     # replace arr in class with processed data
                     setattr(
