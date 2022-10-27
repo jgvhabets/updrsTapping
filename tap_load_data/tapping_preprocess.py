@@ -88,7 +88,7 @@ def detrend_bandpass(
 
 def remove_outlier(
     dat_arr, main_ax_index, fs,
-   verbose=True,
+    verbose=True,
 ):
     """
     Removes large outliers, empirical threshold testing
@@ -110,10 +110,15 @@ def remove_outlier(
     remove_i = np.zeros_like((main_ax))
     # create boolean to remove
     for i, outl in enumerate(outliers):
-        if outl:
-            remove_i[
-                i - halfBuff:i + halfBuff
-            ] = [1] * 2 * halfBuff
+        try:
+            if outl:
+                remove_i[
+                    i - halfBuff:i + halfBuff
+                ] = [1] * 2 * halfBuff
+        except ValueError:
+            print('\n\n', i)
+            print(remove_i.shape)
+
     # replace with nan
     dat_arr[:, remove_i.astype(bool)] = np.nan
 
