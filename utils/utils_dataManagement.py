@@ -29,29 +29,21 @@ def get_proj_dir():
 
 
 def find_stored_data_path():
-
-    if platform == 'win32':
         
-        path = os.getcwd()
-        while os.path.dirname(path)[-5:] != 'Users':
-            lastpath = path
-            path = os.path.dirname(path)
-        # path is now Users/username
-        onedrive_f = [
-            f for f in os.listdir(path) if np.logical_and(
-                'onedrive' in f.lower(),
-                'charit' in f.lower()
-            ) 
-        ]
-        onedrivepath = os.path.join(path, onedrive_f[0])
-        uncut_path = os.path.join(
-            onedrivepath, 'ReTap', 'data', 'BER', 'UNCUT'
-        )
-
-
-    elif platform == 'darwin':
-
-        print('create Python equivalent')
+    path = os.getcwd()
+    while os.path.dirname(path)[-5:] != 'Users':
+        path = os.path.dirname(path)
+    # path is now Users/username
+    onedrive_f = [
+        f for f in os.listdir(path) if np.logical_and(
+            'onedrive' in f.lower(),
+            'charit' in f.lower()
+        ) 
+    ]
+    onedrivepath = os.path.join(path, onedrive_f[0])
+    uncut_path = os.path.join(
+        onedrivepath, 'ReTap', 'data', 'BER', 'UNCUT'
+    )
     
     return uncut_path
 

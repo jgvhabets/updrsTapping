@@ -6,7 +6,8 @@ Function to detect continuous tapping blocks
 # Import public packages and functions
 import numpy as np
 import matplotlib.pyplot as plt
-from os.path import join
+from os.path import join, exists
+from os import makedirs
 from pandas import DataFrame
 
 # Import own functions
@@ -319,6 +320,9 @@ def save_block_csv(
     """
     Store csv-files per blocks
     """
+    if not exists(csv_dir):
+        makedirs(csv_dir)
+
     for n, block_arr in enumerate(acc_blocks):
 
         storeData = DataFrame(
@@ -339,6 +343,9 @@ def plot_blocks(
     """
     Plots overview of selected blocks and main axes
     """
+    if not exists(figsave_dir):
+        makedirs(figsave_dir)
+
     print(f'plotting {figsave_name}...')
     mainax = find_main_axis(acc_arr)
     otheraxes = [0, 1, 2]

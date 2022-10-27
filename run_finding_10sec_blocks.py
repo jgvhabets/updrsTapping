@@ -153,32 +153,32 @@ if __name__ == '__main__':
     uncut_path = utils_dataManagement.find_stored_data_path()
 
     # check for given subs and states
-    # try:
+    if len(sys.argv) == 2:
 
-    with open(sys.argv[1], 'r') as json_data:
+        with open(sys.argv[1], 'r') as json_data:
 
-        cfg = json.load(json_data)
+            cfg = json.load(json_data)
 
-    for sub in cfg['subs_states'].keys():
+        for sub in cfg['subs_states'].keys():
 
-        print(f'\nSTART SUB {sub}')
+            print(f'\nSTART SUB {sub}')
 
-        for state in cfg['subs_states'][sub]:
-            print(f'\n\tSTART {state}')
+            for state in cfg['subs_states'][sub]:
+                print(f'\n\tSTART {state}')
 
-            rawAccData(
-                sub=sub,
-                state=state,
-                uncut_path=uncut_path,
-            )
+                rawAccData(
+                    sub=sub,
+                    state=state,
+                    uncut_path=uncut_path,
+                )
     
-    # except:
-    #     print(type(sys.argv[1]))
-    #     rawAccData(
-    #         sub=sys.argv[1],
-    #         state=sys.argv[2],
-    #         uncut_path=uncut_path,
-    #     )
+    elif len(sys.argv) == 3:
+
+        rawAccData(
+            sub=sys.argv[1],
+            state=sys.argv[2],
+            uncut_path=uncut_path,
+        )
 
 
 
