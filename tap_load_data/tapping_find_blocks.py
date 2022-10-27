@@ -89,11 +89,12 @@ def find_active_blocks(
         min_distance=blocks_p_sec * 2,
         verbose=verbose
     )
+    print(f'\n\nBLOCK INDICES-windows AFTER MERGING: {block_indices}')
 
     block_indices = convert_win_ind_2_sample_ind(
         block_indices=block_indices, fs=fs, winl=winl,
     )
-
+    print(f'\n\nBLOCK INDICES-samples AFTER MERGING: {block_indices}')
     block_indices = remove_short_blocks(
         block_indices=block_indices, fs=fs, min_length=2.5,
     )

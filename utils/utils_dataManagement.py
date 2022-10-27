@@ -78,7 +78,7 @@ def get_file_selection(
 def get_arr_key_indices(ch_names, hand_code):
 
     dict_out = {}
-    print(f'HANDCODE {hand_code}')
+
     if hand_code == 'bilat':
         
         side = 'bilat'

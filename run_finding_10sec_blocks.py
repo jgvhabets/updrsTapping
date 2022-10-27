@@ -108,7 +108,7 @@ class rawAccData:
                         to_detrend=True,
                         to_check_magnOrder=True,
                         to_check_polarity=True,
-                        to_remove_outlier=False,
+                        to_remove_outlier=True,
                     )
                     # replace arr in class with processed data
                     setattr(

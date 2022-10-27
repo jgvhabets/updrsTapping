@@ -86,7 +86,10 @@ def detrend_bandpass(
     return filt_dat
 
 
-def remove_outlier(dat_arr, main_ax_index, fs, verbose):
+def remove_outlier(
+    dat_arr, main_ax_index, fs,
+   verbose=True,
+):
     """
     Removes large outliers, empirical threshold testing
     resulted in using a percentile multiplication.
@@ -94,7 +97,7 @@ def remove_outlier(dat_arr, main_ax_index, fs, verbose):
     with np.nan's.
     """
     main_ax = dat_arr[main_ax_index]
-    buff = int(fs / 4)
+    halfBuff = int(fs * .3)
     thresh = 10 * np.percentile(main_ax, 99)
 
     outliers = np.logical_or(
@@ -105,10 +108,13 @@ def remove_outlier(dat_arr, main_ax_index, fs, verbose):
         f'{np.sum(outliers)} outlier-timepoints to remove'
     )
     remove_i = np.zeros_like((main_ax))
-    
+    # create boolean to remove
     for i, outl in enumerate(outliers):
-        if outl: remove_i[i - buff:i + buff] = [1] * 2 * buff
-    
+        if outl:
+            remove_i[
+                i - halfBuff:i + halfBuff
+            ] = [1] * 2 * halfBuff
+    # replace with nan
     dat_arr[:, remove_i.astype(bool)] = np.nan
 
     return dat_arr
