@@ -15,7 +15,7 @@ from array import array
 from typing import Any
 
 # import own functions
-from utils import utils_dataManagement, tmsi_poly5reader, utils_preprocessing
+from retap_utils import utils_dataManagement, tmsi_poly5reader, utils_preprocessing
 import tap_load_data.tapping_find_blocks as find_blocks
 import tap_load_data.tapping_preprocess as preproc
 
@@ -40,6 +40,8 @@ class rawAccData:
         default_factory=lambda: [
             'LHAND', 'RHAND',
             'FTL', 'FTR',
+            'LFTAP', 'RFTAP',
+            
         ]
     )
 
@@ -165,19 +167,29 @@ if __name__ == '__main__':
 
             cfg = json.load(json_data)
 
-        for sub in cfg['subs_states'].keys():
+        if cfg['subs_states'] == 'ALL':
+            # get unique sub numbers in UNCUT
+            subs = utils_dataManagement.get_unique_subs(uncut_path)
+
+        else:
+            # get defined subs
+            subs = cfg['subs_states'].keys()
+        
+        for sub in subs:
 
             print(f'\nSTART SUB {sub}')
 
-            for state in cfg['subs_states'][sub]:
+            for state in ['M0S0', 'M0S1', 'M1S0', 'M1S1']:
                 print(f'\n\tSTART {state}')
-
-                rawAccData(
-                    sub=sub,
-                    state=state,
-                    uncut_path=uncut_path,
-                    switched_sides=cfg['side_switch'],
-                )
+                try:
+                    rawAccData(
+                        sub=sub,
+                        state=state,
+                        uncut_path=uncut_path,
+                        switched_sides=cfg['side_switch'],
+                    )
+                except FileNotFoundError:
+                    print(f'\t{state} not present for sub{sub}')
     
     elif len(sys.argv) == 3:
 

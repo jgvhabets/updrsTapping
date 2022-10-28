@@ -48,6 +48,18 @@ def find_stored_data_path():
     return uncut_path
 
 
+def get_unique_subs(path):
+
+    files = os.listdir(path)
+    subs = [
+        f.split('_')[0][-3:] for f in files
+        if f[:3].lower() == 'sub'
+    ]
+    subs = list(set(subs))
+
+    return subs
+
+
 def get_file_selection(
     path, sub, state,
     joker_string = None

@@ -1,5 +1,10 @@
 {
-    "subs_states": {
+    "subs_states": "ALL",
+    "side_switch": [
+      "038",
+      "047"
+    ],
+    "already_done": {
       "047": [
         "M0S0",
         "M1S0"
@@ -7,13 +12,7 @@
       "038": [
         "MOffSOff",
         "MOnSOff"
-      ]
-    },
-    "side_switch": [
-      "038",
-      "047"
-    ],
-    "already_done": {
+      ],
       "032": [
         "MedOffStimOff",
         "MedOnStimOff"
