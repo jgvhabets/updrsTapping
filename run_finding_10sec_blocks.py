@@ -35,6 +35,7 @@ class rawAccData:
     joker_string: Any = None
     goal_fs: int = 250
     sub_csv_code: str = 'BER'
+    switched_sides: Any = None
     unilateral_coding_list: list = field(
         default_factory=lambda: [
             'LHAND', 'RHAND',
@@ -72,8 +73,8 @@ class rawAccData:
             if len(key_ind_dict) == 0:
                 print(f'No ACC-keys found in keys: {self.raw.ch_names}')
                 continue
-            print(key_ind_dict)
-            print(self.raw.ch_names)
+            print(f'selected channels: {key_ind_dict}'
+                  f'\n\tout of {self.raw.ch_names}')
 
             # select present acc (aux) variables
             file_data_class = utils_dataManagement.triAxial(
@@ -86,9 +87,14 @@ class rawAccData:
                 if acc_side in ['left', 'right']:
                     # prevent left-calculations on right-files and viaversa
                     if hand_code != 'bilat':
-                        if acc_side != file_side: continue
+                        if acc_side != file_side:
+                            if self.sub not in self.switched_sides:
+                                continue
+                        else:
+                            if self.sub in self.switched_sides:
+                                continue
+
                     # PREPROCESS
-                    
                     # resample if necessary
                     if self.raw.sample_rate > self.goal_fs:
                         setattr(
@@ -170,6 +176,7 @@ if __name__ == '__main__':
                     sub=sub,
                     state=state,
                     uncut_path=uncut_path,
+                    switched_sides=cfg['side_switch'],
                 )
     
     elif len(sys.argv) == 3:
