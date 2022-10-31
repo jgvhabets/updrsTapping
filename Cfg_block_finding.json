@@ -1,5 +1,5 @@
 {
-    "subs_states": "ALL",
+    "subs_states": ["023", "028"],
     "side_switch": [
       "038",
       "047"

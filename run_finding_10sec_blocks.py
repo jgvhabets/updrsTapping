@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
         else:
             # get defined subs
-            subs = cfg['subs_states'].keys()
+            subs = cfg['subs_states']  # subs given as list instead of dict .keys()
         
         for sub in subs:
 
