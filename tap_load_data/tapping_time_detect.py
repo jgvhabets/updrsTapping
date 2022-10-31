@@ -66,6 +66,7 @@ def updrsTapDetector(
         distance=fs * .05,
     )[0]
 
+    # delete impact-indices from posPeak-indices
     for i in impacts:
         idel = np.where(posPeaks == i)
         posPeaks = np.delete(posPeaks, idel)

@@ -3,6 +3,7 @@
 # Import public packages and functions
 import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
+from scipy.stats import variation
 
 # Import own functions
 from tap_load_data.tapping_impact_finder import find_impacts
@@ -14,6 +15,7 @@ def run_preproc_acc(
     to_remove_outlier=True,
     to_check_magnOrder: bool=True,
     to_check_polarity: bool=True,
+    main_axis_method: str='variance',
     verbose: bool=True
 ):
     """
@@ -22,10 +24,7 @@ def run_preproc_acc(
     Input:
         - 
     """
-    
-
-    # print('start preprocess')
-    main_ax_index = find_main_axis(dat_arr)
+    main_ax_index = find_main_axis(dat_arr, method='variance',)
 
     if to_check_magnOrder: dat_arr = check_order_magnitude(
         dat_arr, main_ax_index)
@@ -33,7 +32,7 @@ def run_preproc_acc(
     if to_detrend: dat_arr = detrend_bandpass(dat_arr, fs)
 
     if to_check_polarity: dat_arr = check_polarity(
-        dat_arr, main_ax_index, fs, verbose)
+        dat_arr, main_ax_index, fs, verbose=False)
 
     if to_remove_outlier: dat_arr = remove_outlier(
         dat_arr, main_ax_index, fs, verbose)
@@ -43,7 +42,8 @@ def run_preproc_acc(
     return dat_arr, main_ax_index
 
 
-def find_main_axis(dat_arr):
+def find_main_axis(
+    dat_arr, method: str = 'variance',):
     """
     Select acc-axis which recorded tapping the most
 
@@ -53,17 +53,29 @@ def find_main_axis(dat_arr):
         - main_ax_index (int): [0, 1, or 2], axis
             with most tapping activity detected
     """
-    if len(dat_arr.shape) == 2:
+    assert len(dat_arr.shape) == 2, print(
+        'shape of inserted data is not 2-dimensional'
+    )
+
+    methods = ['minmax', 'variance']
+    if method not in methods:
+        raise ValueError('given method incorrect')
+
+    if dat_arr.shape[0] > dat_arr.shape[1]:
+        dat_arr = dat_arr.T
+
+    if method == 'minmax':
         maxs = np.max(dat_arr, axis=1)
         mins = abs(np.min(dat_arr, axis=1))
-
-    elif len(dat_arr.shape) == 1:
-        maxs = np.max(dat_arr, )
-        mins = abs(np.min(dat_arr,))
-    else:
-        return print('Check shape data array inserted')
-
-    main_ax_index = np.argmax(maxs + mins)
+        main_ax_index = np.argmax(maxs + mins)
+    
+    elif method == 'variance':
+        var = [
+            variation(dat_arr[i, :]) for i in range(
+                dat_arr.shape[0]
+            )
+        ]
+        main_ax_index = np.argmax(var)
 
     return main_ax_index
 
