@@ -27,20 +27,20 @@ def find_impacts(uni_arr, fs):
         - fs (int): sample freq in Hz
     
     Returns:
-        - pos1: impact-positions of method v1
-        - impacts: impact-positions of method v2
+        - impacts1: impact-positions of method v1
+        - impacts2: impact-positions of method v2
         (USE METHOD v2 FOR NOW)
     """
     thresh = np.nanmax(uni_arr) * .2
     arr_diff = np.diff(uni_arr)
     df_thresh = np.nanmax(arr_diff) * .35
-    pos1 = find_peaks(
+    impacts1 = find_peaks(
         np.diff(uni_arr),
         height=[np.nanmax(uni_arr) * .3, np.nanmax(uni_arr)],
         width=[1, 5],
     )[0]
-    pos1 = delete_too_close_peaks(
-        acc_ax=uni_arr, peak_pos=pos1,
+    impacts1 = delete_too_close_peaks(
+        acc_ax=uni_arr, peak_pos=impacts1,
         min_distance=fs / 5
     )
     
@@ -55,18 +55,18 @@ def find_impacts(uni_arr, fs):
         any(arr_diff[i - 3:i + 3] < -df_thresh),
         any(arr_diff[i - 3:i + 3] > df_thresh)
     ) for i in pos_peaks]
-    impacts = pos_peaks[impact_pos]
+    impacts2 = pos_peaks[impact_pos]
     
     # impacts = delete_too_wide_peaks(
     #     acc_ax=uni_arr, peak_pos=impacts,
     #     max_width=fs / 40
     # )
-    impacts = delete_too_close_peaks(
-        acc_ax=uni_arr, peak_pos=impacts,
+    impacts2 = delete_too_close_peaks(
+        acc_ax=uni_arr, peak_pos=impacts2,
         min_distance=fs / 10
     )
 
-    return pos1, impacts
+    return impacts1, 2
 
 
 def delete_too_wide_peaks(
