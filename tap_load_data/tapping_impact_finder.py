@@ -66,7 +66,7 @@ def find_impacts(uni_arr, fs):
         min_distance=fs / 10
     )
 
-    return impacts1, 2
+    return impacts1, impacts2
 
 
 def delete_too_wide_peaks(
