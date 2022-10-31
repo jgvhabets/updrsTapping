@@ -4,3 +4,11 @@
 __pycache__
 tap_load_data/__pycache__
 tap_extract_fts/__pycache__
+
+*/__pycache__
+*/.DS_Store
+
+*.pyc
+*/*.pyc
+
+Cfg_block_finding.json
