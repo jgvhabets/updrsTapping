@@ -48,6 +48,18 @@ def find_stored_data_path():
     return uncut_path
 
 
+def get_unique_subs(path):
+
+    files = os.listdir(path)
+    subs = [
+        f.split('_')[0][-3:] for f in files
+        if f[:3].lower() == 'sub'
+    ]
+    subs = list(set(subs))
+
+    return subs
+
+
 def get_file_selection(
     path, sub, state,
     joker_string = None
@@ -76,7 +88,17 @@ def get_file_selection(
 
 
 def get_arr_key_indices(ch_names, hand_code):
+    """
+    creates dict with acc-keynames and indices
 
+    assumes that acc-channels are called X, Y, Z
+    and that the first three are for the left-finger,
+    last three for the right-finger
+
+    Exception possible for only three acc-sensors present
+
+    TODO: SCONSIDER GENERAL USABILITY WITH CONFIG-FILE OF ACC-NAMES
+    """
     dict_out = {}
 
     if hand_code == 'bilat':
@@ -104,15 +126,15 @@ def get_arr_key_indices(ch_names, hand_code):
     aux_count = 0
 
     for i, key in enumerate(ch_names):
-
+        # only use keys X-Y-Z
         if key in ['X', 'Y', 'Z']:
 
             if f'L_{key}' in dict_out.keys():
-
+                # if left exists, make right
                 dict_out[f'R_{key}'] = i
             
             else:
-
+                # if left doesnt exist, make left
                 dict_out[f'L_{key}'] = i
         
         elif 'aux' in key.lower():

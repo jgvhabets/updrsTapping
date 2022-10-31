@@ -15,7 +15,7 @@ from array import array
 from typing import Any
 
 # import own functions
-from utils import utils_dataManagement, tmsi_poly5reader, utils_preprocessing
+from retap_utils import utils_dataManagement, tmsi_poly5reader, utils_preprocessing
 import tap_load_data.tapping_find_blocks as find_blocks
 import tap_load_data.tapping_preprocess as preproc
 
@@ -35,10 +35,13 @@ class rawAccData:
     joker_string: Any = None
     goal_fs: int = 250
     sub_csv_code: str = 'BER'
+    switched_sides: Any = None
     unilateral_coding_list: list = field(
         default_factory=lambda: [
             'LHAND', 'RHAND',
             'FTL', 'FTR',
+            'LFTAP', 'RFTAP',
+            
         ]
     )
 
@@ -72,8 +75,8 @@ class rawAccData:
             if len(key_ind_dict) == 0:
                 print(f'No ACC-keys found in keys: {self.raw.ch_names}')
                 continue
-            print(key_ind_dict)
-            print(self.raw.ch_names)
+            print(f'selected channels: {key_ind_dict}'
+                  f'\n\tout of {self.raw.ch_names}')
 
             # select present acc (aux) variables
             file_data_class = utils_dataManagement.triAxial(
@@ -86,9 +89,14 @@ class rawAccData:
                 if acc_side in ['left', 'right']:
                     # prevent left-calculations on right-files and viaversa
                     if hand_code != 'bilat':
-                        if acc_side != file_side: continue
+                        if acc_side != file_side:
+                            if self.sub not in self.switched_sides:
+                                continue
+                        else:
+                            if self.sub in self.switched_sides:
+                                continue
+
                     # PREPROCESS
-                    
                     # resample if necessary
                     if self.raw.sample_rate > self.goal_fs:
                         setattr(
@@ -159,18 +167,29 @@ if __name__ == '__main__':
 
             cfg = json.load(json_data)
 
-        for sub in cfg['subs_states'].keys():
+        if cfg['subs_states'] == 'ALL':
+            # get unique sub numbers in UNCUT
+            subs = utils_dataManagement.get_unique_subs(uncut_path)
+
+        else:
+            # get defined subs
+            subs = cfg['subs_states'].keys()
+        
+        for sub in subs:
 
             print(f'\nSTART SUB {sub}')
 
-            for state in cfg['subs_states'][sub]:
+            for state in ['M0S0', 'M0S1', 'M1S0', 'M1S1']:
                 print(f'\n\tSTART {state}')
-
-                rawAccData(
-                    sub=sub,
-                    state=state,
-                    uncut_path=uncut_path,
-                )
+                try:
+                    rawAccData(
+                        sub=sub,
+                        state=state,
+                        uncut_path=uncut_path,
+                        switched_sides=cfg['side_switch'],
+                    )
+                except FileNotFoundError:
+                    print(f'\t{state} not present for sub{sub}')
     
     elif len(sys.argv) == 3:
 

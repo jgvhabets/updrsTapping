@@ -83,18 +83,15 @@ def find_active_blocks(
             else:
                 continue
 
-    # for rep in range(8):
     block_indices = merge_close_blocks(
         block_indices=block_indices,
         min_distance=blocks_p_sec * 2,
         verbose=verbose
     )
-    print(f'\n\nBLOCK INDICES-windows AFTER MERGING: {block_indices}')
 
     block_indices = convert_win_ind_2_sample_ind(
         block_indices=block_indices, fs=fs, winl=winl,
     )
-    print(f'\n\nBLOCK INDICES-samples AFTER MERGING: {block_indices}')
     block_indices = remove_short_blocks(
         block_indices=block_indices, fs=fs, min_length=2.5,
     )
@@ -108,7 +105,7 @@ def find_active_blocks(
     )
 
     if verbose: report_detected_blocks(block_indices, fs)
-
+    print(f'\n\n# BLOCKS {len(acc_arr)}')
     if to_plot: plot_blocks(
         acc_arr, block_indices, fs, 
         figsave_dir, figsave_name,
@@ -143,16 +140,10 @@ def merge_close_blocks(
     new_block_indices = {'start': [], 'end': []}
 
     mergecount = 0
-    # skip_next = False
 
     ongoing = False
 
-    # print(
-    #     f'\n\n{block_indices}\n\n'
-    # )
     for win, end in enumerate(block_indices['end']):
-        # start with end-index
-        # try:
             # take start index of next block (if end not from the last block)
         try:
             start = block_indices['start'][win + 1]
@@ -161,11 +152,8 @@ def merge_close_blocks(
 
             if not ongoing:
                 i_start = block_indices['start'][win]  # no existing i-start
-                print(f'\n\nsetting start ({i_start}) for LAST BLOCK')
             # include last block
-            
             i_end = block_indices['end'][win]
-            print('add last block', i_start, i_end)
             new_block_indices['start'].append(i_start)
             new_block_indices['end'].append(i_end)
             
@@ -191,8 +179,6 @@ def merge_close_blocks(
             new_block_indices['end'].append(i_end)
 
             ongoing = False
-
-    # if verbose: print(f'Blocks merged: {mergecount}')
 
     return new_block_indices
 
