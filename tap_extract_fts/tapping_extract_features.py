@@ -31,10 +31,6 @@ class tapFeatures:
             resulting from continuous tapping detect function
         - updrsSubScore: UPDRS III Fingertapping subscore
             corresponding to acc signal, default False
-        
-    TODO: Add decrement scores: e.g. mean of first 10 taps / mean last 10 taps
-
-    
     """
     triax_arr: Any
     fs: int
@@ -47,7 +43,7 @@ class tapFeatures:
         if len(self.tapDict) == 0:  # no taps detected
             return
 
-        ax = find_main_axis(self.triax_arr)
+        ax = find_main_axis(self.triax_arr, method='variance',)
         self.nTaps = len(self.impacts)
         self.freq = self.nTaps / (
             self.triax_arr.shape[1] / self.fs)
@@ -58,7 +54,6 @@ class tapFeatures:
         self.runRMS_ax, self.runRMS_svm = tap_feats.tap_RMS(
             self.tapDict, self.triax_arr, select='run', ax=ax,
         )
-        # ADD RUN VARIATION 
         
         self.tapRMS_ax, self.tapRMS_svm = tap_feats.tap_RMS(
             self.tapDict, self.triax_arr, select='tap', ax=ax,
