@@ -145,7 +145,8 @@ def check_order_magnitude(dat_arr, main_ax_index):
 import matplotlib.pyplot as plt
 
 def check_polarity(
-    dat_arr, main_ax_index: int, fs: int, verbose):
+    dat_arr, main_ax_index: int, fs: int,
+    verbose: bool = False):
     """
     Check whether accelerometer was placed correctly.
     Correct is defined as when upwards movement is
