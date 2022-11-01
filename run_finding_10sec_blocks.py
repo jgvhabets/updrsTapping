@@ -103,7 +103,7 @@ class rawAccData:
                                 save_side = acc_side[0].upper()
                     
                     else:  # files recorded unilateral
-                        save_side = file_side[0].upper()
+                        save_side = acc_side[0].upper()
 
                     # PREPROCESS
                     # resample if necessary
