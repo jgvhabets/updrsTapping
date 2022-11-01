@@ -92,9 +92,18 @@ class rawAccData:
                         if acc_side != file_side:
                             if self.sub not in self.switched_sides:
                                 continue
+                            else:  # go on w/ non-matching sides, but invert sides for naming of csv's and plots
+                                if acc_side == 'left': save_side = 'R'
+                                elif acc_side == 'right': save_side = 'L'
+                                f = f + '*'
                         else:
                             if self.sub in self.switched_sides:
                                 continue
+                            else:  # matching sides, correct left-right acc-sides
+                                save_side = acc_side[0].upper()
+                    
+                    else:  # files recorded unilateral
+                        save_side = file_side[0].upper()
 
                     # PREPROCESS
                     # resample if necessary
@@ -138,14 +147,15 @@ class rawAccData:
                         ),
                         figsave_name=(
                             f'{self.sub}_{self.state}_'
-                            f'{acc_side[0].upper()}_blocks_detected'
+                            f'{save_side}_blocks_detected'
                         ),
                         to_store_csv=True,
                         csv_dir=os.path.join(
                             proj_dir, 'data', 'tap_block_csvs'
                         ),
                         csv_fname=f'{self.sub_csv_code}{self.sub}_'
-                                  f'{self.state}_{acc_side[0].upper()}',
+                                  f'{self.state}_{save_side}',
+                                  # save_side replaced acc_side[0].upper() to correct for swapped acc-sides
                     )
 
 
