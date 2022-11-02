@@ -5,6 +5,8 @@ import numpy as np
 from scipy.signal import resample
 from itertools import compress
 from typing import Any
+from array import array
+from pandas import DataFrame
 
 # Import own functions
 from tap_load_data.tapping_time_detect import updrsTapDetector
@@ -12,7 +14,7 @@ from tap_load_data.tapping_preprocess import run_preproc_acc, find_main_axis
 
 
 def run_updrs_tap_finder(
-    acc_arr, fs: int, already_preprocd: bool=True,
+    acc_arr: array, fs: int, already_preprocd: bool=True,
     orig_fs: Any=False,
 ):
     """
@@ -37,6 +39,13 @@ def run_updrs_tap_finder(
             of finger-close on thumb)
         - acc_arr (array): preprocessed data array
     """
+    # input variable checks
+    if type(acc_arr) == DataFrame: acc_arr = acc_arr.values()
+    if np.logical_and(
+        acc_arr.shape[1] == 3,
+        acc_arr.shape[0] > acc_arr.shape[1]
+    ): acc_arr = acc_arr.T
+
     if already_preprocd == False:
         # print('preprocessing raw ACC-data')
         if type(orig_fs) == int:

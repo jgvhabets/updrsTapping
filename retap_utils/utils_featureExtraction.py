@@ -14,6 +14,8 @@ from pandas import read_csv, read_excel
 from numpy import logical_and
 
 from retap_utils import utils_dataManagement
+from tap_extract_fts import tapping_extract_features as ftExtr
+import tapping_run as tap_finder
 
 @dataclass(init=True, repr=True,)
 class FeatureSet:
@@ -56,8 +58,7 @@ class FeatureSet:
             
             for sub in subs:
                 if self.verbose: print(f'\tSTART sub: {sub}')
-                print(log["subID"])
-                print(sub.upper())
+
                 if meta: sublog = log[[
                     str(s).upper() == sub.upper() for s in log["subID"]
                 ]]
@@ -67,7 +68,7 @@ class FeatureSet:
                      if f[:6].upper() == sub.upper()]
                 ))
 
-                for combo in product(
+                for combo in product(  # TODO: splits combo in state and side
                     self.states, self.sides
                 ):  # loop over all combis of states and sides
                     
@@ -90,7 +91,7 @@ class FeatureSet:
 
                     if cen == 'BER':  # get meta for correct side
                         if meta: combolog = combolog[
-                            [combo[1].lower() in s for s in combolog['side']]
+                            [combo[1][0].lower() in s for s in combolog['side']]
                         ].reset_index(drop=True)
                     
                     # no files for given sub-state-side combo
@@ -99,19 +100,29 @@ class FeatureSet:
                         continue
 
                     for n, f in enumerate(combo_files):
+                        # find repetition of sub-state-side
                         if f.split('_')[-2][:5] == 'block':
                             rep = int(f.split('_')[-2][-1])
                         else:
                             rep = n + 1
 
+                        # extract updrs tap-score from log-excel
                         if meta:
                             try:
-                                tap_score = combolog[
+                                tap_score = int(combolog[
                                     combolog['repetition'] == rep
-                                ]['updrsFt']
+                                ]['updrsFt'])
+                                print('tapscore', tap_score)
+                                
                             except KeyError:
                                 print('meta not available in log for '
                                       f'{sub}_{combo[0]}_{combo[1]}_{rep}')
+                                continue
+                            except TypeError:
+                                print(rep,)
+                                print(combo)
+                                print(combo_files)
+                                raise TypeError(f'rep is {rep}')
                                 continue
                         else:
                             tap_score = None
@@ -126,7 +137,8 @@ class FeatureSet:
                                 rep=rep,
                                 center=cen,
                                 filepath=os.path.join(datapath, f),
-                                tap_score = tap_score,
+                                tap_score=tap_score,
+                                to_extract_feats=True,
                             )
                         )
 
@@ -144,6 +156,7 @@ class singleTrace:
     center: str
     filepath: str
     tap_score: Any
+    to_extract_feats: bool = True
 
     def __post_init__(self,):
         # store only np-array as acc-signal
@@ -152,8 +165,38 @@ class singleTrace:
         if 'Unnamed: 0' in dat.keys():
             del(dat['Unnamed: 0'])
             dat.to_csv(self.filepath, index=False)
+        # set data to attribute
+        setattr(self, 'acc_sig', dat.values.T)
+
+        # extract sample freq if given
+        if 'hz' in self.filepath.lower():
+            fpart = self.filepath.split('_')[-1]
+            fs = fpart.lower().split('hz')[0]
+            self.fs = int(fs)
+        else:
+            self.fs = 250  # defaults to 250 if not defined in filename
         
-        setattr(self, 'acc_sig', dat)
+        if self.to_extract_feats:
+
+            tap_idx, impact_idx, _ = tap_finder.run_updrs_tap_finder(
+                acc_arr=self.acc_sig,
+                fs=self.fs,
+                already_preprocd=True,
+            )
+            print(f'# {len(impact_idx)} tap found')
+
+            fts = ftExtr.tapFeatures(
+                triax_arr=self.acc_sig,
+                fs=self.fs,
+                impacts=impact_idx,
+                tapDict=tap_idx,
+                updrsSubScore=self.tap_score,
+            )
+            print(f'{self.sub, self.state, self.side, self.tap_score}'
+                '  features extracted\n')
+            setattr(self, 'fts', fts)
+
+
 
 
         

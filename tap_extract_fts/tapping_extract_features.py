@@ -73,7 +73,7 @@ class tapFeatures:
             impact_window=.25, fs=self.fs,
         )
 
-        self.ITI = tap_feats.intraTapInterval(
+        self.intraTapInt = tap_feats.intraTapInterval(
             self.tapDict, self.fs
         )
 
