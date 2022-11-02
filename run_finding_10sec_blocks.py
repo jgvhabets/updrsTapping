@@ -168,7 +168,7 @@ if __name__ == '__main__':
     # command line, not when loaded in, in another
     # script
     
-    uncut_path = utils_dataManagement.find_stored_data_path()
+    uncut_path = utils_dataManagement.find_stored_data_path('uncut')
 
     # check for given subs and states
     if len(sys.argv) == 2:

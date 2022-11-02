@@ -28,7 +28,13 @@ def get_proj_dir():
     return proj_dir
 
 
-def find_stored_data_path():
+def find_stored_data_path(
+    folder: str
+):
+    if folder not in ['onedrive', 'retapdata', 'BER','UNCUT']:
+        raise ValueError(
+            f'given folder: {folder} is incorrect, '
+            'should be [onedrive, retapdata, BER, or UNCUT')
         
     path = os.getcwd()
     while os.path.dirname(path)[-5:] != 'Users':
@@ -40,13 +46,18 @@ def find_stored_data_path():
             'charit' in f.lower()
         ) 
     ]
-    onedrivepath = os.path.join(path, onedrive_f[0])
-    uncut_path = os.path.join(
-        onedrivepath, 'ReTap', 'data', 'BER', 'UNCUT'
-    )
-    
-    return uncut_path
+    onedrive = os.path.join(path, onedrive_f[0])
+    if folder == 'onedrive': return onedrive
 
+    retapdata = os.path.join(onedrive, 'ReTap', 'data')
+    if folder == 'retapdata': return retapdata
+
+    BERdata = os.path.join(retapdata, 'BER')
+    if folder == 'BER': return BERdata
+
+    uncut = os.path.join(BERdata, 'UNCUT')
+    if folder == 'uncut': return uncut
+    
 
 def get_unique_subs(path):
 
