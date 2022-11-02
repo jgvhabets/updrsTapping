@@ -317,7 +317,7 @@ def save_block_csv(
 
         fname = csv_fname + f'_block{n + 1}_{fs}Hz.csv'
 
-        storeData.to_csv(join(csv_dir, fname))
+        storeData.to_csv(join(csv_dir, fname), index=False)
 
         print(f'saved block {n}: {fname} @ {csv_dir}')
 
