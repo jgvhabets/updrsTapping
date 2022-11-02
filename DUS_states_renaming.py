@@ -6,16 +6,15 @@ coding of the acc files.
 Perform before cutting so the cutted blocks
 have the correct M0S0 naming
 """
-if __name__ == 'main':
+if __name__ == '__main__':
     # import necessary functions
     import os
 
     from retap_utils import utils_dataManagement
 
-    from pandas import read_csv, DataFrame
+    from pandas import read_csv
 
     path = utils_dataManagement.find_stored_data_path('DUS')
-
     
     for f in os.listdir(path):
 
@@ -37,4 +36,4 @@ if __name__ == 'main':
 
         data.to_csv(os.path.join(path, 'RENAMED', f_new))
 
-        print(f'saved" {f_new}')
+        print(f'saved {f_new}')
