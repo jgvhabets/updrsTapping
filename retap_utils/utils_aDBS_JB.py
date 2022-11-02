@@ -15,7 +15,6 @@ class aDBS_subjects:
     def __post_init__(self,):
 
         self.subs = self.meta['subject'].unique()
-        run_ids = list(self.ftsAll.keys())
 
         for sub in self.subs:
 
@@ -57,7 +56,7 @@ class aDBS_subRuns:
             )
 
             if self.meta.iloc[i]['stim'] == 'cDbsOff':
-                run_name = 'cOff'  # excl from runname sub{sub}_
+                run_name = 'cOff'
 
             elif self.meta.iloc[i]['stim'] == 'cDbsOn':
                 run_name = 'cOn'
@@ -92,7 +91,7 @@ class aDBS_run:
     """
     """
     sub: str
-    run_name: str  # was run_id
+    run_name: str
     stim: str
     trial: str
     fts: Any

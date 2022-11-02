@@ -13,9 +13,10 @@ from array import array
 
 def get_proj_dir():
     """
-    Takes parent-directory until main-project
-    folder is found, containing code/, data/,
-    figures/
+    Device and OS independent function to find
+    the main-project folder, where this repo is
+    stored. Project folder should contain subfolders:
+    code (containinng this repo), data, figures
     """
     dir = os.getcwd()
 
@@ -31,7 +32,13 @@ def get_proj_dir():
 def find_stored_data_path(
     folder: str
 ):
-    if folder not in ['onedrive', 'retapdata', 'BER','UNCUT']:
+    """
+    Device and OS independent function to find
+    the synced-OneDrive folder where data is stored
+    """
+    if folder.lower() not in [
+        'onedrive', 'retapdata', 'dus', 'ber','uncut'
+    ]:
         raise ValueError(
             f'given folder: {folder} is incorrect, '
             'should be [onedrive, retapdata, BER, or UNCUT')
@@ -47,16 +54,19 @@ def find_stored_data_path(
         ) 
     ]
     onedrive = os.path.join(path, onedrive_f[0])
-    if folder == 'onedrive': return onedrive
+    if folder.lower() == 'onedrive': return onedrive
 
     retapdata = os.path.join(onedrive, 'ReTap', 'data')
-    if folder == 'retapdata': return retapdata
+    if folder.lower() == 'retapdata': return retapdata
 
+    DUSdata = os.path.join(retapdata, 'dus')
+    if folder.lower() == 'dus': return DUSdata
+    
     BERdata = os.path.join(retapdata, 'BER')
-    if folder == 'BER': return BERdata
+    if folder.lower() == 'ber': return BERdata
 
     uncut = os.path.join(BERdata, 'UNCUT')
-    if folder == 'uncut': return uncut
+    if folder.lower() == 'uncut': return uncut
     
 
 def get_unique_subs(path):
@@ -108,7 +118,7 @@ def get_arr_key_indices(ch_names, hand_code):
 
     Exception possible for only three acc-sensors present
 
-    TODO: SCONSIDER GENERAL USABILITY WITH CONFIG-FILE OF ACC-NAMES
+    TODO: CONSIDER GENERAL USABILITY WITH CONFIG-FILE OF ACC-NAMES
     """
     dict_out = {}
 
@@ -186,3 +196,4 @@ class triAxial:
             ]
         except KeyError:
             print('No right indices')
+
