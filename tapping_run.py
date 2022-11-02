@@ -11,7 +11,7 @@ from tap_load_data.tapping_time_detect import updrsTapDetector
 from tap_load_data.tapping_preprocess import run_preproc_acc, find_main_axis
 
 
-def run_updrs_tapping(
+def run_updrs_tap_finder(
     acc_arr, fs: int, already_preprocd: bool=True,
     orig_fs: Any=False,
 ):
