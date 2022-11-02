@@ -17,5 +17,6 @@ environment installation:
 
 additional installed packages:
 <c>pip install mne</c> (for working with raw .poly5 files, e.g. via TMSI-amplifier)
+<c>conda install openpyxl</c> (for opening latest version Excel files)
 
 #### Matlab:
