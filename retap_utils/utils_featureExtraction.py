@@ -10,14 +10,19 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 from itertools import product
-from pandas import read_csv
+from pandas import read_csv, read_excel
+from numpy import logical_and
 
 from retap_utils import utils_dataManagement
 
 @dataclass(init=True, repr=True,)
 class FeatureSet:
     """
+    Class to get meta-data, acc-signals, and
+    features for all defined subjecta.
 
+    Returns separate class with all data and info
+    available per 10-sec tapping trace
     """
     subs_incl: Any = 'ALL'
     centers_incl: list = field(
@@ -26,6 +31,7 @@ class FeatureSet:
         default_factory=lambda: ['M0S0', 'M0S1', 'M1S0', 'M1S1'])
     sides: list = field(
         default_factory=lambda: ['L', 'R'])
+    incl_meta_data: bool = True
 
     def __post_init__(self,):
 
@@ -41,18 +47,37 @@ class FeatureSet:
             else:
                 subs = self.subs_incl
             
+            # import participant log data
+            if self.incl_meta_data:
+                log = get_participantLog(cen)
+                meta = True
+            else: meta = False
+            
             for sub in subs:
                 print(f'\tSTART sub: {sub}')
+                if meta: sublog = sublog = log[log["subID"] == sub]
+
                 files = list(set([f for f in os.listdir(datapath) if f[:6] == sub]))
 
                 for combo in product(
                     self.states, self.sides
                 ):  # loop over all combis of states and sides
 
+                    # get files for state and side
                     combo_files = list(set(
                         [f for f in files if
-                            np.logical_and(combo[0] in f, combo[1] in f)]
+                            logical_and(combo[0] in f, combo[1] in f)]
                     ))
+                    # get meta for correct med and stim state
+                    if meta: combolog = sublog[logical_and(
+                        sublog['medStatus'] == int(combo[0][1]),
+                        sublog['stimStatus'] == int(combo[0][3])
+                    )]
+                    # get meta for correct side
+                    if meta: combolog = combolog[
+                        [combo[1].lower() in s for s in combolog['side']]
+                    ].reset_index(drop=True)
+                    
                     # no files for given sub-state-side combo
                     if len(combo_files) == 0: continue
 
@@ -61,6 +86,20 @@ class FeatureSet:
                             rep = int(f.split('_')[3][-1])
                         else:
                             rep = n + 1
+
+                        if meta: 
+                            # if rep != combolog.iloc[n]['repetition']:
+                            #     print(rep)
+                            #     print(combolog.iloc[n]['repetition'])
+                            #     raise ValueError(
+                            #         'repetition of filename and meta-Log not equal'
+                            #     )
+                        
+                            tap_score = combolog[
+                                combolog['repetition'] == rep
+                            ]['updrsFt']
+                        else:
+                            tap_score = None
 
                         setattr(
                             self,
@@ -71,28 +110,59 @@ class FeatureSet:
                                 side=combo[1],
                                 rep=rep,
                                 center=cen,
-                                filepath=os.path.join(datapath, f)
+                                filepath=os.path.join(datapath, f),
+                                tap_score = tap_score,
                             )
                         )
 
 
 @dataclass(repr=True, init=True,)
 class singleTrace:
+    """
+    Class to store meta-data, acc-signals,
+    and features of one single 10-sec tapping trace
+    """
     sub: str
     state: str
     side: str
     rep: int
     center: str
     filepath: str
+    tap_score: Any
 
     def __post_init__(self,):
         # store only np-array as acc-signal
-        try:
-            self.acc_sig = read_csv(self.filepath).values()
-        except:
-            if os.path.exists(self.filepath):
-                print(f'CSV reading Error in {self.filepath}')
-            else:
-                print(f'{self.filepath} doesnot exist!')
-            
-            
+        dat = read_csv(self.filepath, index_col=False)
+        # delete index col without heading if present
+        if 'Unnamed: 0' in dat.keys():
+            del(dat['Unnamed: 0'])
+            dat.to_csv(self.filepath, index=False)
+        
+        setattr(self, 'acc_sig', dat)
+
+
+        
+
+def get_participantLog(center = ['DUS', 'BER']):
+    """
+    Get Excel file with participant
+    meta data "ReTap_participantLog.xlsx"
+
+    Input:
+        - center: optional, DUS or BER, defaults
+            to both. Defines which excel-sheets
+            are imported
+
+    Returns:
+        - log: dict containing the BER and DUS
+            sheet, each in one DataFRame in dict
+    """
+    p = utils_dataManagement.find_stored_data_path('retapdata')
+    xl_fname = 'ReTap_participantLog.xlsx'
+
+    log = read_excel(
+        os.path.join(p, xl_fname),
+        sheet_name=center
+    )
+
+    return log
