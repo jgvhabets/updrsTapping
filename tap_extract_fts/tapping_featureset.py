@@ -43,22 +43,34 @@ def calc_RMS(acc_signal):
     return RMS
 
 
-def tap_RMS(tapDict, triax_arr, ax, select: str='tap',
-    impact_window: float=.25, fs: int=0):
+def tap_RMS(
+    tapDict,
+    triax_arr,
+    ax,
+    to_norm: bool = False,
+    select: str='tap',
+    impact_window: float=.25,
+    fs: int = None
+):
     """
     Calculates RMS of full acc-signal per tap.
 
     Input:
-        - tapDict (dict result of tap-detect - 
-            continuous tap)
+        - tapDict: dict with list of indices
+            representing tap [startUP, fastestUp,
+            stopUP, startDown, fastestDown, impact,
+            stopDown] (result of updrsTapDetector())
         - triax_arr (array)
+        - ax: index of main-axis
         - select (str): if full -> return RMS per
             full tap; if impact -> return RMS
             around impact
+        - to_norm: bool defining to normalise RMS
+            to duration of originating timeframe
         - impact_window (float): in seconds, total
             window around impact to calculate RMS
-        - fs (int): sample frequency, default is
-            zero to require input if impact is given
+        - fs (int): sample frequency, required for
+            impact-RMS and normalisation
     
     Returns:
         - RMS_uniax (arr)
@@ -67,13 +79,20 @@ def tap_RMS(tapDict, triax_arr, ax, select: str='tap',
     select_options = ['run', 'tap', 'impact']
     assert select in select_options, ('select '
         'select variable incorrect for tap_RMS()')
+    if np.logical_or(to_norm, select == 'impact'):
+        assert type(fs) == int, print(
+            'Frequency has to be given as integer'
+        )
 
     ax = triax_arr[ax]
     svm = signalvectormagn(triax_arr)
 
     if select == 'run':
         RMS_uniax = calc_RMS(ax)
+        if to_norm: RMS_uniax /= (len(ax) / fs)  # divide RMS by length in sec
+        
         RMS_triax = calc_RMS(svm)
+        if to_norm: RMS_triax /= (len(svm) / fs)
 
         return RMS_uniax, RMS_triax
     
@@ -87,6 +106,7 @@ def tap_RMS(tapDict, triax_arr, ax, select: str='tap',
             if select == 'tap':
                 sel1 = int(tap[0])
                 sel2 = int(tap[-1])
+                if np.isnan(sel2): sel2 = int(tap[-2])
 
             elif select == 'impact':
                 sel1 = int(tap[-2] - int(fs * impact_window / 2))
@@ -101,6 +121,9 @@ def tap_RMS(tapDict, triax_arr, ax, select: str='tap',
             
             RMS_uniax[n] = calc_RMS(tap_ax)
             RMS_triax[n] = calc_RMS(tap_svm)
+        
+            if to_norm: RMS_uniax[n] /= (len(tap_ax) / fs)
+            if to_norm: RMS_triax[n] /= (len(tap_svm) / fs)
         
         return RMS_uniax, RMS_triax
 
@@ -129,7 +152,44 @@ def upTap_velocity(tapDict, triax_arr, ax):
     return upVelo_uniax, upVelo_triax
 
 
-import matplotlib.pyplot as plt
+def intraTapInterval(
+    tapDict: dict,
+    fs: int,
+    moment: str = 'impact'
+):
+    """
+    Calculates intratap interval.
+
+    Input:
+        - tapDict: dict with lists resulting
+            [startUP, fastestUp, stopUP, startDown,
+            fastestDown, impact, stopDown]
+            (result of updrsTapDetector())
+        - fs (int): sample freq
+        - moment: timing of ITI calculation, from
+            impact-imapct, or start-start
+    
+    Returns:
+        - iti (arr): array with intratapintervals
+            in seconds
+    """
+    assert moment.lower() in ['impact', 'start'], print(
+        f'moment ({moment}) should be start or impact'
+    )
+    if moment.lower() == 'start': idx = 0
+    elif moment.lower() == 'impact': idx = -2
+    
+    iti = np.array([np.nan] * (len(tapDict) - 1))
+
+    for n in np.arange(len(tapDict) - 1):
+        # take distance between two impact-indices
+        distance = tapDict[n + 1][idx] - tapDict[n][idx]
+    
+        iti[n] = distance / fs  # from samples to seconds
+    
+    return iti
+
+# import matplotlib.pyplot as plt
 
 
 def velo_AUC_calc(tapDict, accSig,):
@@ -139,14 +199,16 @@ def velo_AUC_calc(tapDict, accSig,):
     in one tap until the acceleration drops below 0
 
     Input:
-        - tapDict (dict): containing lists with 6-
-            timepoints per tap
+        - tapDict: dict with lists resulting
+            [startUP, fastestUp, stopUP, startDown,
+            fastestDown, impact, stopDown]
+            (result of updrsTapDetector())
         - accSig (array): uniax acc-array (one ax or svm)
     
     Returns:
         - out (array): one value or nan per tap in tapDict
     """
-    out = []  #np.zeros(len(tapDict))
+    out = []
 
     for n, tap in enumerate(tapDict):
 
@@ -159,7 +221,6 @@ def velo_AUC_calc(tapDict, accSig,):
             if sum(areas) == 0:
                 print('\nSUM 0',n, line[:30], tap[0], tap[1])
             out.append(sum(areas))
-    # print('out', out)
     
     return np.array(out)
 

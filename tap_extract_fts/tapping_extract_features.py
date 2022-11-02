@@ -67,6 +67,10 @@ class tapFeatures:
             impact_window=.25, fs=self.fs,
         )
 
+        self.ITI = tap_feats.intraTapInterval(
+            self.tapDict, self.fs
+        )
+
         if type(self.updrsSubScore) == str or np.str_:
             self.updrsSubScore = float(self.updrsSubScore)
 
