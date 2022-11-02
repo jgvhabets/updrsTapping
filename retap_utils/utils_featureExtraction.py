@@ -32,11 +32,12 @@ class FeatureSet:
     sides: list = field(
         default_factory=lambda: ['L', 'R'])
     incl_meta_data: bool = True
+    verbose: bool = False
 
     def __post_init__(self,):
 
         for cen in self.centers_incl:
-            print(f'start with {cen}')
+            if self.verbose: print(f'start with {cen}')
             datapath = utils_dataManagement.find_stored_data_path(cen)
 
             if self.subs_incl == 'ALL':
@@ -54,50 +55,64 @@ class FeatureSet:
             else: meta = False
             
             for sub in subs:
-                print(f'\tSTART sub: {sub}')
-                if meta: sublog = sublog = log[log["subID"] == sub]
+                if self.verbose: print(f'\tSTART sub: {sub}')
+                print(log["subID"])
+                print(sub.upper())
+                if meta: sublog = log[[
+                    str(s).upper() == sub.upper() for s in log["subID"]
+                ]]
 
-                files = list(set([f for f in os.listdir(datapath) if f[:6] == sub]))
+                subfiles = list(set(
+                    [f for f in os.listdir(datapath)
+                     if f[:6].upper() == sub.upper()]
+                ))
 
                 for combo in product(
                     self.states, self.sides
                 ):  # loop over all combis of states and sides
-
+                    
                     # get files for state and side
-                    combo_files = list(set(
-                        [f for f in files if
+                    if cen == 'BER':
+                        combo_files = list(set(
+                            [f for f in subfiles if
                             logical_and(combo[0] in f, combo[1] in f)]
-                    ))
+                        ))
+                    elif cen == 'DUS':  # DUS dta is without sides
+                        combo_files = list(set(
+                            [f for f in subfiles if combo[0] in f]
+                        ))
+
                     # get meta for correct med and stim state
                     if meta: combolog = sublog[logical_and(
                         sublog['medStatus'] == int(combo[0][1]),
                         sublog['stimStatus'] == int(combo[0][3])
-                    )]
-                    # get meta for correct side
-                    if meta: combolog = combolog[
-                        [combo[1].lower() in s for s in combolog['side']]
-                    ].reset_index(drop=True)
+                    )].reset_index(drop=True)
+
+                    if cen == 'BER':  # get meta for correct side
+                        if meta: combolog = combolog[
+                            [combo[1].lower() in s for s in combolog['side']]
+                        ].reset_index(drop=True)
                     
                     # no files for given sub-state-side combo
-                    if len(combo_files) == 0: continue
+                    if len(combo_files) == 0:
+                        if self.verbose: print(f'no files found for {combo}')
+                        continue
 
                     for n, f in enumerate(combo_files):
-                        if f.split('_')[3][:5] == 'block':
-                            rep = int(f.split('_')[3][-1])
+                        if f.split('_')[-2][:5] == 'block':
+                            rep = int(f.split('_')[-2][-1])
                         else:
                             rep = n + 1
 
-                        if meta: 
-                            # if rep != combolog.iloc[n]['repetition']:
-                            #     print(rep)
-                            #     print(combolog.iloc[n]['repetition'])
-                            #     raise ValueError(
-                            #         'repetition of filename and meta-Log not equal'
-                            #     )
-                        
-                            tap_score = combolog[
-                                combolog['repetition'] == rep
-                            ]['updrsFt']
+                        if meta:
+                            try:
+                                tap_score = combolog[
+                                    combolog['repetition'] == rep
+                                ]['updrsFt']
+                            except KeyError:
+                                print('meta not available in log for '
+                                      f'{sub}_{combo[0]}_{combo[1]}_{rep}')
+                                continue
                         else:
                             tap_score = None
 

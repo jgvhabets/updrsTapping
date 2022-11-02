@@ -59,7 +59,7 @@ def find_stored_data_path(
     retapdata = os.path.join(onedrive, 'ReTap', 'data')
     if folder.lower() == 'retapdata': return retapdata
 
-    DUSdata = os.path.join(retapdata, 'dus')
+    DUSdata = os.path.join(retapdata, 'dus', 'RENAMED')
     if folder.lower() == 'dus': return DUSdata
     
     BERdata = os.path.join(retapdata, 'BER')
