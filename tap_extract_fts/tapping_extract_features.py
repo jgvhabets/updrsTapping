@@ -58,6 +58,12 @@ class tapFeatures:
         self.tapRMS_ax, self.tapRMS_svm = tap_feats.tap_RMS(
             self.tapDict, self.triax_arr, select='tap', ax=ax,
         )
+
+        self.tapRMSnrm_ax, self.tapRMSnrm_svm = tap_feats.tap_RMS(
+            self.tapDict, self.triax_arr, select='tap', ax=ax,
+            to_norm=True, fs=self.fs,
+        )
+
         self.upVelo_ax, self.upVelo_svm = tap_feats.upTap_velocity(
             self.tapDict, self.triax_arr, ax=ax,
         )
