@@ -37,8 +37,8 @@ def updrsTapDetector(
     Return:
         - tapi (list of lists): list with full-recognized taps,
             every list is one tap. Every list contains 6 moments
-            of the tap: [start-UP, fastest-UP, end-UP,
-            start-DOWN, fastest-DOWN, end-DOWN]
+            of the tap: [startUP, fastestUp, stopUP, startDown, 
+            fastestDown, impact, stopDown]
         - tapTimes (list of lists): lists per tap corresponding
             with tapi, expressed in seconds after start data array
         - endPeaks (array): indices of impact-peak which correspond
