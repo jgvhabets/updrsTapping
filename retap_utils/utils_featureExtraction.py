@@ -68,36 +68,39 @@ class FeatureSet:
                      if f[:6].upper() == sub.upper()]
                 ))
 
-                for combo in product(  # TODO: splits combo in state and side
+                for state, side in product(
                     self.states, self.sides
                 ):  # loop over all combis of states and sides
                     
-                    # get files for state and side
+                    # get FILES for state
+                    combo_files = list(set(
+                        [f for f in subfiles if state in f]
+                    ))
+                    # for BER data, select on side (DUS is unilat)
                     if cen == 'BER':
                         combo_files = list(set(
-                            [f for f in subfiles if
-                            logical_and(combo[0] in f, combo[1] in f)]
-                        ))
-                    elif cen == 'DUS':  # DUS dta is without sides
-                        combo_files = list(set(
-                            [f for f in subfiles if combo[0] in f]
+                            [f for f in combo_files if f'_{side}_' in f]
                         ))
 
-                    # get meta for correct med and stim state
+                    # get META for correct med and stim state
                     if meta: combolog = sublog[logical_and(
-                        sublog['medStatus'] == int(combo[0][1]),
-                        sublog['stimStatus'] == int(combo[0][3])
+                        sublog['medStatus'] == int(state[1]),
+                        sublog['stimStatus'] == int(state[3])
                     )].reset_index(drop=True)
 
                     if cen == 'BER':  # get meta for correct side
                         if meta: combolog = combolog[
-                            [combo[1][0].lower() in s for s in combolog['side']]
+                            [side[0].lower() in s for s in combolog['side']]
                         ].reset_index(drop=True)
                     
                     # no files for given sub-state-side combo
                     if len(combo_files) == 0:
-                        if self.verbose: print(f'no files found for {combo}')
+                        if self.verbose: print(f'no FILES found for {state, side}')
                         continue
+                    # elif len(combolog) == 0:
+                    #     if self.verbose: print(f'no SCORES found for {state, side}')
+                    #     continue
+                        
 
                     for n, f in enumerate(combo_files):
                         # find repetition of sub-state-side
@@ -112,28 +115,30 @@ class FeatureSet:
                                 tap_score = int(combolog[
                                     combolog['repetition'] == rep
                                 ]['updrsFt'])
-                                print('tapscore', tap_score)
                                 
                             except KeyError:
-                                print('meta not available in log for '
-                                      f'{sub}_{combo[0]}_{combo[1]}_{rep}')
+                                # print('meta not available in log for '
+                                #       f'{sub}_{state}_{side}_{rep}')
                                 continue
+                        
                             except TypeError:
-                                print(rep,)
-                                print(combo)
-                                print(combo_files)
-                                raise TypeError(f'rep is {rep}')
-                                continue
+                                if combolog.shape[0] == 0:
+                                    continue
+                                else:
+                                    print(f'REP is {rep}, {sub, state, side}')
+                                    print(combolog)
+                                    raise TypeError('typeError not because of empty combolog DF')
+                            
                         else:
                             tap_score = None
 
                         setattr(
                             self,
-                            f'{sub}_{combo[0]}_{combo[1]}_{rep}',
+                            f'{sub}_{state}_{side}_{rep}',
                             singleTrace(
                                 sub=sub,
-                                state=combo[0],
-                                side=combo[1],
+                                state=state,
+                                side=side,
                                 rep=rep,
                                 center=cen,
                                 filepath=os.path.join(datapath, f),
@@ -183,19 +188,15 @@ class singleTrace:
                 fs=self.fs,
                 already_preprocd=True,
             )
-            print(f'# {len(impact_idx)} tap found')
+            setattr(self, 'impact_idx', impact_idx)
 
-            fts = ftExtr.tapFeatures(
+            self.fts = ftExtr.tapFeatures(
                 triax_arr=self.acc_sig,
                 fs=self.fs,
-                impacts=impact_idx,
+                impacts=self.impact_idx,
                 tapDict=tap_idx,
                 updrsSubScore=self.tap_score,
             )
-            print(f'{self.sub, self.state, self.side, self.tap_score}'
-                '  features extracted\n')
-            setattr(self, 'fts', fts)
-
 
 
 
