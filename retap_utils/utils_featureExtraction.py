@@ -197,6 +197,7 @@ class singleTrace:
                 tapDict=tap_idx,
                 updrsSubScore=self.tap_score,
             )
+            print(self.impact_idx)
 
 
 
