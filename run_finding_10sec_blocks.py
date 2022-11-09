@@ -35,7 +35,7 @@ class rawAccData:
     joker_string: Any = None
     goal_fs: int = 250
     sub_csv_code: str = 'BER'
-    switched_sides: Any = None
+    switched_sides: list = field(default_factory=list)
     unilateral_coding_list: list = field(
         default_factory=lambda: [
             'LHAND', 'RHAND',

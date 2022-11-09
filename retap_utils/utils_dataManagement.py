@@ -122,35 +122,23 @@ def get_arr_key_indices(ch_names, hand_code):
     """
     dict_out = {}
 
-    if hand_code == 'bilat':
-        
-        side = 'bilat'
-        aux_keys = [
-            'R_X', 'R_Y', 'R_Z',
-            'L_X', 'L_Y', 'L_Z'
-        ]
-    
-    else:
+    # acc_keys = [
+    #     'R_X', 'R_Y', 'R_Z',
+    #     'L_X', 'L_Y', 'L_Z'
+    # ]
+    # set laterality of file for later analysis flow
+    if hand_code == 'bilat': file_side = 'bilat'
+    elif 'L' in hand_code: file_side = 'left'
+    elif 'R' in hand_code: file_side = 'right'
 
-        if 'L' in hand_code:
-            S = 'L'
-            side = 'left'
-        elif 'R' in hand_code:
-            S = 'R'
-            side = 'right'
-
-        aux_keys = [
-            f'{S}_X', f'{S}_Y', f'{S}_Z'
-        ]
-
-    
+    # name acc which are called XYZ or aux without laterality
     aux_count = 0
 
     for i, key in enumerate(ch_names):
         # standard BER acc-coding is X-Y-Z (first right, then left)
         if key in ['X', 'Y', 'Z']:
 
-            if f'L_{key}' in dict_out.keys():
+            if f'R_{key}' in dict_out.keys():
                 # if right exists, make LEFT
                 dict_out[f'L_{key}'] = i
             
@@ -162,10 +150,13 @@ def get_arr_key_indices(ch_names, hand_code):
 
             if 'iso' in key.lower(): continue  # ISO is no ACC-channel in TMSi
 
+            if 'L' in hand_code: aux_keys = ['L_X', 'L_Y', 'L_Z']
+            elif 'R' in hand_code: aux_keys = ['R_X', 'R_Y', 'R_Z']
+
             dict_out[aux_keys[aux_count]] = i
             aux_count += 1
 
-    return dict_out, side
+    return dict_out, file_side
 
 
 @dataclass(init=True, repr=True)
