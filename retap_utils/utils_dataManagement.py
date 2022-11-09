@@ -126,8 +126,8 @@ def get_arr_key_indices(ch_names, hand_code):
         
         side = 'bilat'
         aux_keys = [
-            'L_X', 'L_Y', 'L_Z',
-            'R_X', 'R_Y', 'R_Z'
+            'R_X', 'R_Y', 'R_Z',
+            'L_X', 'L_Y', 'L_Z'
         ]
     
     else:
@@ -147,20 +147,20 @@ def get_arr_key_indices(ch_names, hand_code):
     aux_count = 0
 
     for i, key in enumerate(ch_names):
-        # only use keys X-Y-Z
+        # standard BER acc-coding is X-Y-Z (first right, then left)
         if key in ['X', 'Y', 'Z']:
 
             if f'L_{key}' in dict_out.keys():
-                # if left exists, make right
-                dict_out[f'R_{key}'] = i
+                # if right exists, make LEFT
+                dict_out[f'L_{key}'] = i
             
             else:
-                # if left doesnt exist, make left
-                dict_out[f'L_{key}'] = i
+                # start with RIGHT keys (first in TMSi files)
+                dict_out[f'R_{key}'] = i
         
         elif 'aux' in key.lower():
 
-            if 'iso' in key.lower(): continue
+            if 'iso' in key.lower(): continue  # ISO is no ACC-channel in TMSi
 
             dict_out[aux_keys[aux_count]] = i
             aux_count += 1
@@ -173,7 +173,7 @@ class triAxial:
     """
     Select accelerometer keys
 
-    TODO: add Cfg variable to indicate
+    TODO for laterb TOOLBOX: add Cfg variable to indicate
     user-specific accelerometer-key
     """
     data: array
@@ -184,7 +184,7 @@ class triAxial:
         try:
             self.left = self.data[
                 self.key_indices['L_X']:
-                self.key_indices['L_Z'] + 1
+                self.key_indices['L_Z'] + 1  # +1 to include last index while slicing
             ]
         except KeyError:
             print('No left indices')
