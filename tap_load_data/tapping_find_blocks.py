@@ -137,6 +137,10 @@ def merge_close_blocks(
         - new_block_indices: containing new starts and end
             indices in two lists
     """
+    if len(block_indices['start']) == 1:
+        
+        return block_indices 
+
     new_block_indices = {'start': [], 'end': []}
 
     mergecount = 0
