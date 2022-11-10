@@ -36,12 +36,14 @@ def find_onedrive_path(
     Device and OS independent function to find
     the synced-OneDrive folder where data is stored
     """
-    if folder.lower() not in [
-        'onedrive', 'retapdata', 'dus', 'ber','uncut'
-    ]:
+    folder_options = [
+        'onedrive', 'retapdata', 'dus', 'ber','uncut',
+        'figures',
+    ]
+    if folder.lower() not in folder_options:
         raise ValueError(
             f'given folder: {folder} is incorrect, '
-            'should be [onedrive, retapdata, BER, or UNCUT')
+            f'should be {folder_options}')
         
     path = os.getcwd()
     while os.path.dirname(path)[-5:] != 'Users':
@@ -67,6 +69,9 @@ def find_onedrive_path(
 
     uncut = os.path.join(BERdata, 'UNCUT')
     if folder.lower() == 'uncut': return uncut
+
+    figpath = os.path.join(onedrive, 'Retap', 'figures')
+    if folder.lower() == 'figures': return figpath
     
 
 def get_unique_subs(path):
