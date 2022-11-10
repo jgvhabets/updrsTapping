@@ -199,6 +199,7 @@ class singleTrace:
     center: str
     filepath: str
     tap_score: Any
+    goal_Fs: int = 250
     to_extract_feats: bool = True
 
     def __post_init__(self,):
@@ -209,30 +210,37 @@ class singleTrace:
             if 'Unnamed: 0' in dat.keys():
                 del(dat['Unnamed: 0'])
                 dat.to_csv(self.filepath, index=False)
-            dat = dat.values.T  # only np-array as acc-signal
 
-        elif self.center == 'DUS':  # matlab-saved CSV-files
+            dat = dat.values.T  # only np-array as acc-signal
+            preproc_bool=True
+
+        elif self.center == 'DUS':  
+            # matlab-saved CSV-files
             dat = loadtxt(self.filepath, delimiter='\t')
+            preproc_bool=False
 
         # set data to attribute (3 rows, n-samples columns)
         setattr(self, 'acc_sig', dat)
 
         # extract sample freq if given
-        if 'hz' in self.filepath.lower():
-            fpart = self.filepath.split('_')[-1]
-            fs = fpart.lower().split('hz')[0]
-            self.fs = int(fs)
-        else:
-            self.fs = 250  # defaults to 250 if not defined in filename
+        fpart = self.filepath.split('_')[-1]
+        fs = fpart.lower().split('hz')[0]
+        self.fs = int(fs)
+        if self.center == 'DUS': self.fs = 4000
 
         if self.to_extract_feats:
 
-            tap_idx, impact_idx, _ = tap_finder.run_updrs_tap_finder(
+            tap_idx, impact_idx, new_accsig, new_fs = tap_finder.run_updrs_tap_finder(
                 acc_arr=self.acc_sig,
                 fs=self.fs,
-                already_preprocd=False,
+                goal_fs=self.goal_Fs,
+                already_preprocd=preproc_bool,
             )
             setattr(self, 'impact_idx', impact_idx)
+
+            if preproc_bool == False:
+                setattr(self, 'acc_sig', new_accsig)
+                setattr(self, 'fs', new_fs)
             
             if len(impact_idx) < 10:
                 print(f'\n\tonly {len(impact_idx)} taps for {self.filepath}')
@@ -245,7 +253,11 @@ class singleTrace:
                 updrsSubScore=self.tap_score,
             )
 
-        
+
+### PUT IN SEPERATE PY FILE  
+# import os
+
+# import retap_utils.utils_dataManagement as utils_dataMangm
 
 if __name__ == '__main__':
     """
@@ -256,7 +268,7 @@ if __name__ == '__main__':
     """
     data = FeatureSet(
         # subs_incl = ['BER055', 'BER054'],
-        centers_incl = ['DUS',],   # 'DUS'
+        centers_incl = ['BER',],   # 'DUS'
         verbose=False,
     )
 
@@ -268,7 +280,7 @@ if __name__ == '__main__':
     utils_dataMangm.save_class_pickle(
         class_to_save=data,
         path=deriv_path,
-        filename='ftClass_DUS'
+        filename='ftClass_BER'
     )
 
 
