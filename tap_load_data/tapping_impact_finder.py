@@ -34,6 +34,8 @@ def find_impacts(uni_arr, fs):
     thresh = np.nanmax(uni_arr) * .2
     arr_diff = np.diff(uni_arr)
     df_thresh = np.nanmax(arr_diff) * .35
+    
+    ### METHOD v1
     impacts1 = find_peaks(
         np.diff(uni_arr),
         height=[np.nanmax(uni_arr) * .3, np.nanmax(uni_arr)],
@@ -44,7 +46,7 @@ def find_impacts(uni_arr, fs):
         min_distance=fs / 5
     )
     
-    # v2.0 method
+    # METHOD v2
     pos_peaks = find_peaks(
         uni_arr,
         height=(thresh, np.nanmax(uni_arr)),
@@ -55,18 +57,15 @@ def find_impacts(uni_arr, fs):
         any(arr_diff[i - 3:i + 3] < -df_thresh),
         any(arr_diff[i - 3:i + 3] > df_thresh)
     ) for i in pos_peaks]
+    
     impacts2 = pos_peaks[impact_pos]
     
-    # impacts = delete_too_wide_peaks(
-    #     acc_ax=uni_arr, peak_pos=impacts,
-    #     max_width=fs / 40
-    # )
     impacts2 = delete_too_close_peaks(
         acc_ax=uni_arr, peak_pos=impacts2,
         min_distance=fs / 10
     )
 
-    return impacts1, impacts2
+    return impacts2
 
 
 def delete_too_wide_peaks(

@@ -15,7 +15,7 @@ def run_preproc_acc(
     to_remove_outlier=True,
     to_check_magnOrder: bool=True,
     to_check_polarity: bool=True,
-    main_axis_method: str='variance',
+    main_axis_method: str='minmax',
     verbose: bool=True
 ):
     """
@@ -24,7 +24,7 @@ def run_preproc_acc(
     Input:
         - 
     """
-    main_ax_index = find_main_axis(dat_arr, method='variance',)
+    main_ax_index = find_main_axis(dat_arr, method=main_axis_method,)
 
     if to_check_magnOrder: dat_arr = check_order_magnitude(
         dat_arr, main_ax_index)
@@ -43,7 +43,7 @@ def run_preproc_acc(
 
 
 def find_main_axis(
-    dat_arr, method: str = 'variance',):
+    dat_arr, method: str = 'minmax',):
     """
     Select acc-axis which recorded tapping the most
 
@@ -122,14 +122,12 @@ def remove_outlier(
     remove_i = np.zeros_like((main_ax))
     # create boolean to remove
     for i, outl in enumerate(outliers):
-        try:
-            if outl:
-                remove_i[
-                    i - halfBuff:i + halfBuff
-                ] = [1] * 2 * halfBuff
-        except ValueError:
-            print('\n\n', i)
-            print(remove_i.shape)
+        if outl:
+            i_start = i - halfBuff
+            if i_start < 0: i_start = 0
+            remove_i[
+                i_start:i + halfBuff
+            ] = [1] * 2 * halfBuff
 
     # replace with nan
     dat_arr[:, remove_i.astype(bool)] = np.nan
@@ -158,9 +156,6 @@ def check_order_magnitude(dat_arr, main_ax_index):
     return dat_arr
 
 
-
-import matplotlib.pyplot as plt
-
 def check_polarity(
     dat_arr, main_ax_index: int, fs: int,
     verbose: bool = False):
@@ -172,7 +167,7 @@ def check_polarity(
     
     main_ax = dat_arr[main_ax_index]
 
-    _, impacts = find_impacts(main_ax, fs)
+    impacts = find_impacts(main_ax, fs)
 
     if len(impacts) == 0:
         print('No impacts-peaks detected in polarity preprocess function')

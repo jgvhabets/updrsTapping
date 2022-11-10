@@ -12,6 +12,7 @@ from itertools import compress
 # Import own functions
 import tap_load_data.tapping_preprocess as preprocess
 from tap_load_data.tapping_impact_finder import find_impacts
+from tap_extract_fts.tapping_featureset import signalvectormagn
    
 
 def updrsTapDetector(
@@ -47,6 +48,8 @@ def updrsTapDetector(
     sig = acc_triax[main_ax_i]
     sigdf = np.diff(sig)
     timeStamps = np.arange(0, len(sig), 1 / fs)
+    # use svm for impact finding now
+    svm = signalvectormagn(acc_triax)
 
     # Thresholds for movement detection
     posThr = np.nanmean(sig)
@@ -58,7 +61,7 @@ def updrsTapDetector(
         'cutoff_time': .25,
     }
 
-    _, impacts = find_impacts(sig, fs)  # use v2 for now
+    impacts = find_impacts(svm, fs)  # use v2 for now, before svm impacts were found with sig (is main axis)
 
     posPeaks = find_peaks(
         sig,
