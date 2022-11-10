@@ -2,27 +2,32 @@
 
 # Import public packages and functions
 import numpy as np
-from scipy.signal import resample
 from itertools import compress
 from typing import Any
 from array import array
 from pandas import DataFrame
+from dataclasses import field
 
 # Import own functions
 from tap_load_data.tapping_time_detect import updrsTapDetector
 from tap_load_data.tapping_preprocess import run_preproc_acc, find_main_axis
+from retap_utils.utils_preprocessing import resample
 
 
 def run_updrs_tap_finder(
-    acc_arr: array, fs: int, already_preprocd: bool=True,
-    orig_fs: Any=False,
+    acc_arr: array,
+    fs: int,
+    already_preprocd: bool=True,
+    goal_fs: int = 250,
+    main_axis_method: str = 'minmax',
+    verbose: bool = False,
 ):
     """
     Input:
         - acc_arr (array): tri-axial acc array
         - fs (int): sampling freq in Hz - in case of
             resampling: this is the wanted fs where the
-            data is converted to.
+            data should be converted to.
         - already_preproc (bool): if True: preprocessing
             function is called
         - orig_fs: if preprocessing still has to be done,
@@ -47,11 +52,19 @@ def run_updrs_tap_finder(
     ): acc_arr = acc_arr.T
 
     if already_preprocd == False:
-        # print('preprocessing raw ACC-data')
-        if type(orig_fs) == int:
-            # print('resample data array')
-            acc_arr = resample(acc_arr,
-                acc_arr.shape[0] // (orig_fs // fs))
+
+        if fs != goal_fs:
+            acc_arr = resample(
+                data=acc_arr,
+                Fs_orig=fs,
+                Fs_new=goal_fs
+            )
+            fs = goal_fs
+            if verbose:
+                print(
+                    f'resample data array: from {fs} Hz to {goal_fs} Hz'
+                    f' new shape {acc_arr.shape}'
+                )
 
         acc_arr, main_ax_i = run_preproc_acc(
             dat_arr=acc_arr,
@@ -63,12 +76,12 @@ def run_updrs_tap_finder(
         )
 
     else:
-        main_ax_i = find_main_axis(acc_arr, method='variance')
+        main_ax_i = find_main_axis(acc_arr, method=main_axis_method)
         
     tap_ind, impacts = updrsTapDetector(
         acc_triax=acc_arr, fs=fs, main_ax_i=main_ax_i
     )
 
-    return tap_ind, impacts, acc_arr
+    return tap_ind, impacts, acc_arr, fs
 
 
