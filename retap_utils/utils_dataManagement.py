@@ -5,7 +5,7 @@ ReTap-Toolbox
 
 # import public packages and functions
 import os
-from sys import platform
+from pandas import read_excel
 import numpy as np
 from dataclasses import dataclass
 from array import array
@@ -188,3 +188,27 @@ class triAxial:
         except KeyError:
             print('No right indices')
 
+
+def get_participantLog(center = ['DUS', 'BER']):
+    """
+    Get Excel file with participant
+    meta data "ReTap_participantLog.xlsx"
+
+    Input:
+        - center: optional, DUS or BER, defaults
+            to both. Defines which excel-sheets
+            are imported
+
+    Returns:
+        - log: dict containing the BER and DUS
+            sheet, each in one DataFRame in dict
+    """
+    p = find_stored_data_path('retapdata')
+    xl_fname = 'ReTap_participantLog.xlsx'
+
+    log = read_excel(
+        os.path.join(p, xl_fname),
+        sheet_name=center
+    )
+
+    return log
