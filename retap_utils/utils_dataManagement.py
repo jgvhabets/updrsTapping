@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from array import array
 
 
-def get_proj_dir():
+def get_local_proj_dir():
     """
     Device and OS independent function to find
     the main-project folder, where this repo is
@@ -29,7 +29,7 @@ def get_proj_dir():
     return proj_dir
 
 
-def find_stored_data_path(
+def find_onedrive_path(
     folder: str
 ):
     """
