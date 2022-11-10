@@ -10,14 +10,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import linregress, variation
 from itertools import compress
-from os.path import join
+from os.path import join, exists
+from os import mkdir
 
 # Import own fucntions
 from tap_extract_fts.tapping_feat_calc import aggregate_arr_fts
 
 
 def combineFeatsPerScore(
-    ftDict: dict, fts_include, merge_method: str,
+    ftClass: dict, fts_include, merge_method: str,
 ):
     """
     Merges and compares features of different
@@ -25,8 +26,8 @@ def combineFeatsPerScore(
     responding UPDRS tapping subscore
 
     Input:
-        - ftDict (dict): containing Classes
-            (from tapping_extract_features)
+        - ftClass (class): containing Classes
+            (from main_featExtractionClass())
             with features and info per run
         - fts_include (list): define which
             features to include in analysis
@@ -54,11 +55,13 @@ def combineFeatsPerScore(
         ft_per_score = {}
         for s in np.arange(5): ft_per_score[s] = []
 
-        for i in list(ftDict.keys()):
+        for key in vars(ftClass).keys():
+            if key[:3] != 'BER' or key[:3] != 'DUS': continue
             
-            s = ftDict[i].updrsSubScore
+            score = ftClass.key.tap_score
+
             try:
-                tempscore = getattr(ftDict[i], ft_sel)
+                tempscore = getattr(ftClass.key, ft_sel)
             except AttributeError:
                 print(f'skipped {i}, no taps available')
                 continue
@@ -119,6 +122,8 @@ def plot_boxplot_feats_per_subscore(
         - fts_per_score (list): list containing
             feature-arrays per
     """
+    if not exists(figsave_dir): mkdir(figsave_dir)
+
     fig, axes = plt.subplots(
         len(fts_include), 1, figsize=(24, 16)
     )
