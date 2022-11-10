@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 # Import own custom functions
 import tap_extract_fts.tapping_featureset as tap_feats
+from tap_load_data.tapping_impact_finder import find_impacts
 from tap_load_data.tapping_preprocess import find_main_axis
 
 @dataclass(init=True, repr=True, )

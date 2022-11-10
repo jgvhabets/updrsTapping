@@ -9,6 +9,7 @@ from pandas import read_excel
 import numpy as np
 from dataclasses import dataclass
 from array import array
+import pickle
 
 
 def get_local_proj_dir():
@@ -208,7 +209,7 @@ def get_participantLog(center = ['DUS', 'BER']):
         - log: dict containing the BER and DUS
             sheet, each in one DataFRame in dict
     """
-    p = find_stored_data_path('retapdata')
+    p = find_onedrive_path('retapdata')
     xl_fname = 'ReTap_participantLog.xlsx'
 
     log = read_excel(
@@ -217,3 +218,41 @@ def get_participantLog(center = ['DUS', 'BER']):
     )
 
     return log
+
+
+def save_class_pickle(
+    class_to_save,
+    path,
+    filename,
+    extension='.P',
+):
+    pickle_path = os.path.join(
+        path, filename + extension
+    )
+
+    with open(pickle_path, 'wb') as f:
+        pickle.dump(class_to_save, f)
+
+    f.close()
+
+    return print(f'inserted class saved as {pickle_path}')
+
+
+def load_class_pickle(
+    file_to_load,
+):
+    """
+    Input:
+        - file_to_load: string including path,
+            filename, and extension
+    """
+    pickle_path = os.path.join(
+        path, filename + extension
+    )
+
+    with open(file_to_load, 'rb') as f:
+        output = pickle.load(class_to_save, f)
+
+    f.close()
+
+    return output

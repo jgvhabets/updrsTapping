@@ -54,32 +54,29 @@ def combineFeatsPerScore(
         ft_per_score = {}
         for s in np.arange(5): ft_per_score[s] = []
 
-        for key in vars(ftClass).keys():
+        for trace in ftClass.incl_traces:
             
-            if ~ np.logical_or('BER' in key, 'DUS' in key):
-                continue
+            traceClass = getattr(ftClass, trace)
+            tap_score = traceClass.tap_score
+            ft_score = getattr(traceClass.fts, ft_sel)
 
-            score = getattr(ftClass, key).tap_score
-
-            tempscore = getattr(getattr(ftClass, key).fts, ft_sel)
-
-            if type(tempscore) != np.ndarray:  #float or np.float_
-                ft_per_score[score].append(tempscore)
+            if type(ft_score) != np.ndarray:  #float or np.float_
+                ft_per_score[tap_score].append(ft_score)
             
-            elif type(tempscore) == np.ndarray:
+            elif type(ft_score) == np.ndarray:
 
-                if tempscore.size == 0: continue
+                if ft_score.size == 0: continue
 
                 if merge_method == 'allin1':
-                    if np.isnan(tempscore).any():
-                        tempscore[~np.isnan(tempscore)]
-                    ft_per_score[score].extend(tempscore)  # all in one big list
+                    if np.isnan(ft_score).any():
+                        ft_score[~np.isnan(ft_score)]
+                    ft_per_score[tap_score].extend(ft_score)  # all in one big list
 
                 else:
-                    ft_per_score[score].append(
+                    ft_per_score[tap_score].append(
                         aggregate_arr_fts(
                             method=merge_method,
-                            arr=tempscore
+                            arr=ft_score
                         )
                     )
 

@@ -13,9 +13,11 @@ from itertools import product
 from pandas import read_csv
 from numpy import logical_and, isnan, loadtxt
 
-from retap_utils import utils_dataManagement as utils_dataMangm
-from tap_extract_fts import tapping_extract_features as ftExtr
+import tap_extract_fts.tapping_extract_features as ftExtr
 import tapping_run as tap_finder
+import retap_utils.utils_dataManagement as utils_dataMangm
+
+
 
 @dataclass(init=True, repr=True,)
 class FeatureSet:
@@ -35,6 +37,7 @@ class FeatureSet:
         default_factory=lambda: ['L', 'R'])
     incl_meta_data: bool = True
     skipped_no_meta: list = field(default_factory=list)
+    incl_traces: list = field(default_factory=list)
     verbose: bool = False
 
     def __post_init__(self,):
@@ -180,6 +183,8 @@ class FeatureSet:
                             )
                         )
 
+                        self.incl_traces.append(f'{sub}_{state}_{side}_{rep}')
+
 
 @dataclass(repr=True, init=True,)
 class singleTrace:
@@ -221,14 +226,16 @@ class singleTrace:
             self.fs = 250  # defaults to 250 if not defined in filename
 
         if self.to_extract_feats:
-            print('extract', self.filepath)
+
             tap_idx, impact_idx, _ = tap_finder.run_updrs_tap_finder(
                 acc_arr=self.acc_sig,
                 fs=self.fs,
                 already_preprocd=False,
             )
             setattr(self, 'impact_idx', impact_idx)
-            print(f'NUMBER OF IMPACTS FOUND {len(impact_idx)}\n')
+            
+            if len(impact_idx) < 10:
+                print(f'\n\tonly {len(impact_idx)} taps for {self.filepath}')
 
             self.fts = ftExtr.tapFeatures(
                 triax_arr=self.acc_sig,
@@ -239,4 +246,29 @@ class singleTrace:
             )
 
         
+
+if __name__ == '__main__':
+    """
+    run from main repo path as:
+        python -m tap_extract_fts.main_featExtractionClass
+    -m is there because it is ran from a module/package 
+    (within a folder)
+    """
+    data = FeatureSet(
+        # subs_incl = ['BER055', 'BER054'],
+        centers_incl = ['DUS',],   # 'DUS'
+        verbose=False,
+    )
+
+    deriv_path = os.path.join(
+        utils_dataMangm.get_local_proj_dir(),
+        'data',
+        'derivatives'
+    )
+    utils_dataMangm.save_class_pickle(
+        class_to_save=data,
+        path=deriv_path,
+        filename='ftClass_DUS'
+    )
+
 
