@@ -221,13 +221,14 @@ class singleTrace:
             self.fs = 250  # defaults to 250 if not defined in filename
 
         if self.to_extract_feats:
-
+            print('extract', self.filepath)
             tap_idx, impact_idx, _ = tap_finder.run_updrs_tap_finder(
                 acc_arr=self.acc_sig,
                 fs=self.fs,
-                already_preprocd=True,
+                already_preprocd=False,
             )
             setattr(self, 'impact_idx', impact_idx)
+            print(f'NUMBER OF IMPACTS FOUND {len(impact_idx)}\n')
 
             self.fts = ftExtr.tapFeatures(
                 triax_arr=self.acc_sig,

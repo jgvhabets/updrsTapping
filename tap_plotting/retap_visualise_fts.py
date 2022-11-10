@@ -8,7 +8,6 @@ contain one class with attribute fts, per 10-sec trace
 # Import public packages and functions
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import linregress, variation
 from itertools import compress
 from os.path import join, exists
 from os import mkdir
@@ -56,18 +55,16 @@ def combineFeatsPerScore(
         for s in np.arange(5): ft_per_score[s] = []
 
         for key in vars(ftClass).keys():
-            if key[:3] != 'BER' or key[:3] != 'DUS': continue
             
-            score = ftClass.key.tap_score
-
-            try:
-                tempscore = getattr(ftClass.key, ft_sel)
-            except AttributeError:
-                print(f'skipped {i}, no taps available')
+            if ~ np.logical_or('BER' in key, 'DUS' in key):
                 continue
 
+            score = getattr(ftClass, key).tap_score
+
+            tempscore = getattr(getattr(ftClass, key).fts, ft_sel)
+
             if type(tempscore) != np.ndarray:  #float or np.float_
-                ft_per_score[s].append(tempscore)
+                ft_per_score[score].append(tempscore)
             
             elif type(tempscore) == np.ndarray:
 
@@ -76,10 +73,10 @@ def combineFeatsPerScore(
                 if merge_method == 'allin1':
                     if np.isnan(tempscore).any():
                         tempscore[~np.isnan(tempscore)]
-                    ft_per_score[s].extend(tempscore)  # all in one big list
+                    ft_per_score[score].extend(tempscore)  # all in one big list
 
                 else:
-                    ft_per_score[s].append(
+                    ft_per_score[score].append(
                         aggregate_arr_fts(
                             method=merge_method,
                             arr=tempscore

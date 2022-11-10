@@ -172,17 +172,11 @@ def check_polarity(
     
     main_ax = dat_arr[main_ax_index]
 
-    # plt.figure(figsize=(24,12))
-    # plt.plot(dat_arr.T, alpha=.5)
-    # plt.plot(np.diff(main_ax))
-    # plt.axhline(np.percentile(main_ax, 99))
-    # plt.show()
     _, impacts = find_impacts(main_ax, fs)
-    # impacts = find_peaks(
-    #     np.diff(main_ax),
-    #     height=np.percentile(main_ax, 99)
-    # )[0]
-    assert len(impacts) > 0, 'No impacts-peaks detected'
+
+    if len(impacts) == 0:
+        print('No impacts-peaks detected in polarity preprocess function')
+        return dat_arr
 
     count = 0    
     for pos in impacts:
