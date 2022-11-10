@@ -20,7 +20,7 @@ def signalvectormagn(acc_arr):
     """
     if acc_arr.shape[0] != 3: acc_arr = acc_arr.T
     assert acc_arr.shape[0] == 3, ('Array must'
-    'be tri-axial (x, y, z from accelerometer')
+    'be tri-axial (x, y, z from accelerometer)')
   
     svm = np.sqrt(
         acc_arr[0] ** 2 +
