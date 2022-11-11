@@ -55,6 +55,7 @@ def updrsTapDetector(
     sig = acc_triax[main_ax_i]
     sigdf = np.diff(sig)
     # timeStamps = np.arange(0, len(sig), 1 / fs)
+
     # use svm for impact finding now
     svm = signalvectormagn(acc_triax)
 
@@ -68,7 +69,7 @@ def updrsTapDetector(
         'cutoff_time': .25,
     }
 
-    impacts = find_impacts(svm, fs)  # use v2 for now, before svm impacts were found with sig (is main axis)
+    impacts = find_impacts(svm, fs)  # svm impacts are mot robust, regardless of main ax
 
     posPeaks = find_peaks(
         sig,
@@ -94,8 +95,9 @@ def updrsTapDetector(
     # [startUP, fastestUp, stopUP, startDown, fastestDown, impact, stopDown]
     tempi = empty_timelist.copy()
     state = 'lowRest'
-    post_impact_blank = int(fs / 1000 * 15)  # 10 msec
+    post_impact_blank = int(fs / 1000 * 15)  # 15 msec
     blank_count = 0
+    end_last_tap_n = 0  # needed for backup filling of tap-start-index
 
     # Sample-wise movement detection        
     for n, y in enumerate(sig[:-1]):
@@ -113,15 +115,22 @@ def updrsTapDetector(
                 if sigdf[n] > 0:
                     blank_count = 0
                     tempi[6] = n
-                    tapi.append(np.array(tempi))
-                    tempi = empty_timelist.copy()
-                    state='lowRest'
+                    # always set first index of tap
+                    if np.isnan(tempi[0]):
+                        # if not detected, than use end of last tap
+                        tempi[0] = end_last_tap_n + 1
+
+                    tapi.append(np.array(tempi))  # add detected tap-indices as array
+                    tempi = empty_timelist.copy()  # start with new empty list
+                    state='lowRest'  # reset state
+                    end_last_tap_n = tempi[6]  # update last impact n to possible fill next start-index
                     
 
         elif state == 'lowRest':
+            # debugging to get start of tap every time in
             if np.logical_and(
-                y > posThr,
-                sigdf[n] > np.percentile(sigdf, 75)
+                y > posThr,  # try with half the threshold to detect start-index
+                sigdf[n] > np.percentile(sigdf, 50)  # was 75th percentile 
             ):                
                 state='upAcc1'
                 tempi[0] = n  # START OF NEW TAP, FIRST INDEX
