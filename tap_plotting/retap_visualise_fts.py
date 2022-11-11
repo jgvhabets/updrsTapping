@@ -17,7 +17,7 @@ from tap_extract_fts.tapping_feat_calc import aggregate_arr_fts
 
 
 def combineFeatsPerScore(
-    ftClass: dict, fts_include, merge_method: str,
+    ftClass, fts_include, merge_method: str,
 ):
     """
     Merges and compares features of different
@@ -57,8 +57,18 @@ def combineFeatsPerScore(
         for trace in ftClass.incl_traces:
             
             traceClass = getattr(ftClass, trace)
+            # do not include traces without detected taps
+            if len(traceClass.fts.tapDict) == 0:
+                print(f'({ft_sel})\t0 taps available for {trace}')
+                continue
+
             tap_score = traceClass.tap_score
-            ft_score = getattr(traceClass.fts, ft_sel)
+
+            try:
+                ft_score = getattr(traceClass.fts, ft_sel)
+            except AttributeError:
+                print(f'{trace}\nattributes: {vars(traceClass.fts).keys()}')
+                raise AttributeError
 
             if type(ft_score) != np.ndarray:  #float or np.float_
                 ft_per_score[tap_score].append(ft_score)
