@@ -232,8 +232,7 @@ def save_class_pickle(
 
     with open(pickle_path, 'wb') as f:
         pickle.dump(class_to_save, f)
-
-    f.close()
+        f.close()
 
     return print(f'inserted class saved as {pickle_path}')
 
@@ -242,17 +241,29 @@ def load_class_pickle(
     file_to_load,
 ):
     """
+    Loads saved Classes. When running this code
+    the class-definitions have to be called before
+    executign this code.
+
+    So, for example:
+
+    from tap_extract_fts.main_featExtractionClass import FeatureSet, singleTrace
+    from retap_utils import utils_dataManagement as utilsDataMan
+
+    deriv_path = os.path.join(utilsDataMan.get_local_proj_dir(), 'data', 'derivatives')
+    loaded_class = utilsDataMan.load_class_pickle(os.path.join(deriv_path, 'classFileName.P'))
+
+
     Input:
         - file_to_load: string including path,
             filename, and extension
+    
+    Returns:
+        - output: variable containing the class
     """
-    pickle_path = os.path.join(
-        path, filename + extension
-    )
 
     with open(file_to_load, 'rb') as f:
-        output = pickle.load(class_to_save, f)
-
-    f.close()
+        output = pickle.load(f)
+        f.close()
 
     return output

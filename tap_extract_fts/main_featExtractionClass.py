@@ -27,6 +27,13 @@ class FeatureSet:
 
     Returns separate class with all data and info
     available per 10-sec tapping trace
+
+    tapDict are contains lists per tap, containing
+    7 detected time points, representing:
+    [   startUP, fastestUp, stopUP, startDown, 
+        fastestDown, impact, stopDown]
+    NOTE: not all 7 timepoints are always present,
+    at impact (5) and stopDown (6) are present
     """
     subs_incl: Any = 'ALL'
     centers_incl: list = field(
@@ -268,7 +275,7 @@ if __name__ == '__main__':
     """
     data = FeatureSet(
         # subs_incl = ['BER055', 'BER054'],
-        centers_incl = ['BER',],   # 'DUS'
+        centers_incl = ['BER', 'DUS'],   # 'DUS'
         verbose=False,
     )
 
@@ -280,7 +287,7 @@ if __name__ == '__main__':
     utils_dataMangm.save_class_pickle(
         class_to_save=data,
         path=deriv_path,
-        filename='ftClass_BER'
+        filename='ftClass_ALL',
     )
 
 
