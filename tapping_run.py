@@ -44,8 +44,9 @@ def run_updrs_tap_finder(
             of finger-close on thumb)
         - acc_arr (array): preprocessed data array
     """
-    # input variable checks
+    # if data is DataFRame convert to np array
     if type(acc_arr) == DataFrame: acc_arr = acc_arr.values()
+    # transpose if needed
     if np.logical_and(
         acc_arr.shape[1] == 3,
         acc_arr.shape[0] > acc_arr.shape[1]
@@ -78,9 +79,16 @@ def run_updrs_tap_finder(
     else:
         main_ax_i = find_main_axis(acc_arr, method=main_axis_method)
         
-    tap_ind, impacts = updrsTapDetector(
+    tap_detect_results = updrsTapDetector(
         acc_triax=acc_arr, fs=fs, main_ax_i=main_ax_i
     )
+    # if nans are removed within tap-detection, 3 outputs are given instead of 2
+    if len(tap_detect_results) == 2:
+        tap_ind, impacts = tap_detect_results
+    # work further with nan-removed arrays, also used for impact/tap-finding 
+    elif len(tap_detect_results) == 3:
+        tap_ind, impacts, acc_arr = tap_detect_results
+    
 
     return tap_ind, impacts, acc_arr, fs
 

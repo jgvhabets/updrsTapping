@@ -253,7 +253,8 @@ class singleTrace:
                 print(
                     f'\tonly {len(impact_idx)} taps for '
                     f'{self.sub}, {self.state}, {self.sub},'
-                    f' {self.side}, {self.rep}'
+                    f' {self.side}, {self.rep}    '
+                    f'(subscore: {self.tap_score})'
                 )
 
             self.fts = ftExtr.tapFeatures(

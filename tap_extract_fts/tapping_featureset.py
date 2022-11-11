@@ -275,8 +275,8 @@ def amplitudeDecrement(
 
 
 def smallSlopeChanges(
-    tempacc, resolution: str, n_hop: int=1,
-    tapDict = []
+    accsig, resolution: str, n_hop: int=1,
+    tapDict = [], smoothing,
 ):
     """
     Detects the number of small changes in
@@ -286,7 +286,6 @@ def smallSlopeChanges(
     therefore lower numbers of small
     slope changes
 
-    TODO: divide by sample freq to norm for diff Fs
     TODO: test with smoothing
 
     Inputs:
@@ -306,9 +305,9 @@ def smallSlopeChanges(
         count = 0
         for ax in [0, 1, 2]:
 
-            diftemp = np.diff(tempacc[ax])
-            for i in np.arange(diftemp.shape[0] - n_hop):
-                if -1 < diftemp[i + n_hop] * diftemp[i] < 0:
+            axdiff = np.diff(accsig[ax])
+            for i in np.arange(axdiff.shape[0] - n_hop):
+                if (axdiff[i + n_hop] * axdiff[i]) < 0:  # removed if -1 < axdiff...
                     count += 1
 
     elif resolution == 'taps':
@@ -327,21 +326,24 @@ def smallSlopeChanges(
                 continue
             
             else:
-                tap_acc = tempacc[:, int(tap[0]):int(tap[-1])]
+                tap_acc = accsig[:, int(tap[0]):int(tap[-1])]
                 count = 0
 
                 for ax in [0, 1, 2]:
-                    diftemp = np.diff(tap_acc[ax])
+                    axdiff = np.diff(tap_acc[ax])
 
-                    for i in np.arange(diftemp.shape[0] - n_hop):
-                        if -1 < diftemp[i + n_hop] * diftemp[i] < 0:
+                    for i in np.arange(axdiff.shape[0] - n_hop):
+                        if (axdiff[i + n_hop] * axdiff[i]) < 0:  # removed if -1 < axdiff...
                             count += 1
                 
                 countlist.append(count)
 
         count = np.array(countlist)
 
-    return count
+        duration_sig = accsig.shape[1] / fs
+        norm_count = count / duration_sig
+
+    return norm_count
 
 
 
