@@ -46,12 +46,12 @@ def updrsTapDetector(
             to end of finger closing moment.
     """
     # select and remove timepoints with nans
-    if np.isnan(acc_triax).any():
+    if np.isnan(acc_triax).any().any():
         # get timepoints with any nans in all 3 axes
-        sel = len(np.isnan(acc_triax).any(axis=0))
+        sel = ~np.isnan(acc_triax).any(axis=0)
         # if len(sel) == 3: sel = len(np.isnan(acc_triax).any(axis=1))  # for debugging if acc_triax has other shape
         acc_triax = acc_triax[:, sel]
-
+    
     sig = acc_triax[main_ax_i]
     sigdf = np.diff(sig)
     # timeStamps = np.arange(0, len(sig), 1 / fs)

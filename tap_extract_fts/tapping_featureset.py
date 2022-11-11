@@ -234,6 +234,9 @@ def amplitudeDecrement(
     amplitude features calculated per single-
     tap
 
+    TODO: repeat measure with slope of linreg line
+    TODO: normalise decrement to max value within trace
+
     Inputs:
         - list with single-tap-amp features
         - width_sel (float): part of taps at
@@ -283,7 +286,8 @@ def smallSlopeChanges(
     therefore lower numbers of small
     slope changes
 
-    PM: TODO: divide by sample freq to norm for diff Fs
+    TODO: divide by sample freq to norm for diff Fs
+    TODO: test with smoothing
 
     Inputs:
         - acc (array): tri-axial acceleration

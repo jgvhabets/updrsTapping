@@ -71,7 +71,7 @@ class FeatureSet:
             
             for n_sub, sub in enumerate(subs):
                 print(
-                    f'\textracting sub {sub} ('
+                    f'extracting sub {sub} ('
                     f'{round((n_sub + 1) / len(subs) * 100)} % of {cen})'
                 )
 
@@ -250,7 +250,11 @@ class singleTrace:
                 setattr(self, 'fs', new_fs)
             
             if len(impact_idx) < 10:
-                print(f'\n\tonly {len(impact_idx)} taps for {self.filepath}')
+                print(
+                    f'\tonly {len(impact_idx)} taps for '
+                    f'{self.sub}, {self.state}, {self.sub},'
+                    f' {self.side}, {self.rep}'
+                )
 
             self.fts = ftExtr.tapFeatures(
                 triax_arr=self.acc_sig,
@@ -274,7 +278,7 @@ if __name__ == '__main__':
     (within a folder)
     """
     data = FeatureSet(
-        # subs_incl = ['BER055', 'BER054'],
+        # subs_incl = ['BER056', ],
         centers_incl = ['BER', 'DUS'],   # 'DUS'
         verbose=False,
     )
