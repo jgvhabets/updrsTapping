@@ -30,7 +30,7 @@ def updrsTapDetector(
 
     Input:
         - acc_triax (arr): tri-axial accelerometer data-
-            array containing x, y, z.
+            array containing x, y, z, shape: [3 x nsamples].
         - main_ax_i (int): index of axis which detected
             strongest signal during tapping (0, 1, or 2)
         - fs (int): sample frequency in Hz
@@ -45,9 +45,16 @@ def updrsTapDetector(
         - endPeaks (array): indices of impact-peak which correspond
             to end of finger closing moment.
     """
+    # select and remove timepoints with nans
+    if np.isnan(acc_triax).any():
+        # get timepoints with any nans in all 3 axes
+        sel = len(np.isnan(acc_triax).any(axis=0))
+        # if len(sel) == 3: sel = len(np.isnan(acc_triax).any(axis=1))  # for debugging if acc_triax has other shape
+        acc_triax = acc_triax[:, sel]
+
     sig = acc_triax[main_ax_i]
     sigdf = np.diff(sig)
-    timeStamps = np.arange(0, len(sig), 1 / fs)
+    # timeStamps = np.arange(0, len(sig), 1 / fs)
     # use svm for impact finding now
     svm = signalvectormagn(acc_triax)
 
