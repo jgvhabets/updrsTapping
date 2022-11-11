@@ -26,10 +26,9 @@ def plot_detected_taps(
     savepath = join(
         get_local_proj_dir(),
         'figures',
-        'tap_find_check',
+        'tap_find_check', 'v2'
     )
-    if not exists(savepath): mkdirs(savepath)
-
+    if not exists(savepath): mkdir(savepath)
 
     for trace in ftClass.incl_traces:
 
