@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 # Import own custom functions
 import tap_extract_fts.tapping_featureset as tap_feats
-from tap_load_data.tapping_impact_finder import find_impacts
+import tap_extract_fts.tapping_postFeatExtr_calc as postExtrCalc
 from tap_load_data.tapping_preprocess import find_main_axis
 
 @dataclass(init=True, repr=True, )
@@ -45,58 +45,112 @@ class tapFeatures:
             return
 
         ax = find_main_axis(self.triax_arr, method='variance',)
+
         self.nTaps = len(self.impacts)
+        
         self.freq = self.nTaps / (
             self.triax_arr.shape[1] / self.fs)
-        self.tap_durations = np.diff(self.impacts) / self.fs
-        self.freq2 = round(1 / self.tap_durations.mean(), 1)
-
-
-        self.runRMS_ax, self.runRMS_svm = tap_feats.tap_RMS(
-            self.tapDict, self.triax_arr, select='run', ax=ax,
-        )
         
-        self.tapRMS_ax, self.tapRMS_svm = tap_feats.tap_RMS(
-            self.tapDict, self.triax_arr, select='tap', ax=ax,
-        )
-
-        self.tapRMSnrm_ax, self.tapRMSnrm_svm = tap_feats.tap_RMS(
-            self.tapDict, self.triax_arr, select='tap', ax=ax,
-            to_norm=True, fs=self.fs,
-        )
-
-        self.upVelo_ax, self.upVelo_svm = tap_feats.upTap_velocity(
-            self.tapDict, self.triax_arr, ax=ax,
-        )
-
-        self.impactRMS_ax, self.impactRMS_svm = tap_feats.tap_RMS(
-            self.tapDict, self.triax_arr, select='impact', ax=ax,
-            impact_window=.25, fs=self.fs,
-        )
-
+        self.tap_durations = np.diff(self.impacts) / self.fs
+        
         self.intraTapInt = tap_feats.intraTapInterval(
             self.tapDict, self.fs
+        )
+
+        # self.runRMS_ax, self.runRMS_svm = tap_feats.RMS_extraction(
+        #     self.tapDict, self.triax_arr, select='run', ax=ax,
+        # )
+        
+        self.tapRMS = tap_feats.RMS_extraction(
+            self.tapDict,
+            self.triax_arr,
+            acc_select='svm',
+            unit_to_assess='taps',
+            ax=ax,
+        )
+
+        self.tapRMSnrm = tap_feats.RMS_extraction(
+            self.tapDict,
+            self.triax_arr,
+            acc_select='svm',
+            unit_to_assess='taps',
+            ax=ax,
+            to_norm=True,
+            fs=self.fs,
+        )
+
+        self.impactRMS = tap_feats.RMS_extraction(
+            self.tapDict,
+            self.triax_arr,
+            acc_select='svm',
+            unit_to_assess='impacts',
+            ax=ax,
+            fs=self.fs,
+        )
+
+        self.raise_velocity = tap_feats.velocity_raising(
+            self.tapDict, self.triax_arr, ax=ax,
+        )  # currently only velocity raising based on svm
+        
+        self.jerkiness = tap_feats.jerkiness(
+            accsig=self.triax_arr,
+            fs=self.fs,
+            tapDict=self.tapDict,
+            unit_to_assess='taps',
+            smooth_samples=0,
+        )
+
+        self.jerkiness_smooth = tap_feats.jerkiness(
+            accsig=self.triax_arr,
+            fs=self.fs,
+            tapDict=self.tapDict,
+            unit_to_assess='taps',
+            smooth_samples=5,
         )
 
         if type(self.updrsSubScore) == str or np.str_:
             self.updrsSubScore = float(self.updrsSubScore)
 
-        self.dirChange_run = tap_feats.smallSlopeChanges(
-            self.triax_arr, resolution='run',
-        )
-        
-        self.dirChange_taps = tap_feats.smallSlopeChanges(
-            self.triax_arr, resolution='taps', tapDict=self.tapDict,
-        )
+        ### POST-EXTRACTION ANALYSIS
+        fts_to_postExtr_calc = [
+            'tapRMSnrm', 'intraTapInt', 'jerkiness',
+        ]
 
-        self.ampDecrement = tap_feats.amplitudeDecrement(
-            tapAmpFts=[
-                self.tapRMS_svm,
-                self.impactRMS_svm,
-                self.upVelo_svm
-            ],
+        for ft in fts_to_postExtr_calc:
 
-        )
+            setattr(
+                self,
+                f'mean_{ft}',
+                postExtrCalc.aggregate_arr_fts(
+                    ft_array=getattr(self, ft),
+                    method='mean',
+                )
+            )
+            setattr(
+                self,
+                f'coefVar_{ft}',
+                postExtrCalc.aggregate_arr_fts(
+                    ft_array=getattr(self, ft),
+                    method='coefVar',
+                )
+            )
+       
+            setattr(
+                self,
+                f'decr_{ft}',
+                postExtrCalc.ft_decrement(
+                    ft_array=getattr(self, ft),
+                    method='diff_in_mean',
+                )
+            )
+            setattr(
+                self,
+                f'slope_{ft}',
+                postExtrCalc.ft_decrement(
+                    ft_array=getattr(self, ft),
+                    method='regr_slope',
+                )
+            )
 
         # clear up space
         self.triax_arr = 'cleaned up'
