@@ -6,18 +6,24 @@ contain one class with attribute fts, per 10-sec trace
 """
 
 # Import public packages and functions
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import compress
 from os.path import join, exists
 from os import mkdir
+import datetime as dt
 
-# Import own fucntions
-from tap_extract_fts.tapping_feat_calc import aggregate_arr_fts
+# Import own functions
+from retap_utils import utils_dataManagement as utilsDatamng
 
-
-def combineFeatsPerScore(
-    ftClass, fts_include, merge_method: str,
+def sort_fts_on_tapScore(
+    ftClass,
+    fts_include: list = [
+        # 'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'decr_tapRMSnrm', 'slope_tapRMSnrm',
+        # 'mean_intraTapInt', 'coefVar_intraTapInt', 'decr_intraTapInt', 'slope_intraTapInt',
+        'mean_jerkiness', 'coefVar_jerkiness', 'decr_jerkiness', 'slope_jerkiness',
+    ],
 ):
     """
     Merges and compares features of different
@@ -30,36 +36,27 @@ def combineFeatsPerScore(
             with features and info per run
         - fts_include (list): define which
             features to include in analysis
-        - merge_method (str): method to
-            aggregate array-based features
-            per run, most be from defined list
     
     Returns:
-        feat_dict_out (dict): containing one dict
+        - feat_dict_out (dict): containing one dict
             per features; with features per
             updrs tapping subscore
             
     """
-    merge_method_list = [
-        'allin1', 'mean', 'sum', 'stddev', 'coefVar',
-        'range', 'trend_slope', 'trend_R', 'median', 'variance',
-    ]
-    assert merge_method in merge_method_list, (
-        f'merge_method: "{merge_method}" is not '
-        f'in {merge_method_list}')
-
     feat_dict_out = {}
     for ft_sel in fts_include:
 
         ft_per_score = {}
-        for s in np.arange(5): ft_per_score[s] = []
+        for s in np.arange(5): ft_per_score[s] = []  # for every possible updrs subscore one list
 
         for trace in ftClass.incl_traces:
             
             traceClass = getattr(ftClass, trace)
             # do not include traces without detected taps
             if len(traceClass.fts.tapDict) == 0:
-                print(f'({ft_sel})\t0 taps available for {trace}')
+                print(
+                    f'({ft_sel})\t0 taps available for {trace}'
+                    f' (tap-subscore: {traceClass.tap_score})')
                 continue
 
             tap_score = traceClass.tap_score
@@ -70,29 +67,11 @@ def combineFeatsPerScore(
                 print(f'{trace}\nattributes: {vars(traceClass.fts).keys()}')
                 raise AttributeError
 
-            if type(ft_score) != np.ndarray:  #float or np.float_
-                ft_per_score[tap_score].append(ft_score)
-            
-            elif type(ft_score) == np.ndarray:
-
-                if ft_score.size == 0: continue
-
-                if merge_method == 'allin1':
-                    if np.isnan(ft_score).any():
-                        ft_score[~np.isnan(ft_score)]
-                    ft_per_score[tap_score].extend(ft_score)  # all in one big list
-
-                else:
-                    ft_per_score[tap_score].append(
-                        aggregate_arr_fts(
-                            method=merge_method,
-                            arr=ft_score
-                        )
-                    )
+            ft_per_score[tap_score].append(ft_score)
 
         feat_dict_out[ft_sel] = ft_per_score
 
-    return feat_dict_out
+    return feat_dict_out, fts_include
 
 
 
@@ -112,9 +91,11 @@ def clean_list_of_lists(dirty_lists):
 
 
 def plot_boxplot_feats_per_subscore(
-    fts_include: list, featDict: dict,
-    merge_method: str, plot_title: str='',
-    figsave_name: str='', figsave_dir: str='',
+    fts_include: list,
+    sorted_feat_dict: dict,
+    plot_title: str='',
+    figsave_name: str='',
+    figsave_dir: str='',
     show: bool=False
 ):
     """
@@ -133,10 +114,10 @@ def plot_boxplot_feats_per_subscore(
     )
 
     for row, ft_sel in enumerate(fts_include):
-        fts_scores = featDict[ft_sel]
+        fts_scores = sorted_feat_dict[ft_sel]
         boxdata = [fts_scores[s] for s in fts_scores.keys()]
         boxdata = clean_list_of_lists(boxdata)
-        axes[row].boxplot(boxdata)
+        axes[row].boxplot(boxdata)  # boxplot function takes list of lists
 
         tick_Ns = [len(l) for l in boxdata]
         xlabels = [
@@ -147,10 +128,11 @@ def plot_boxplot_feats_per_subscore(
         axes[row].set_xlabel('UPDRS tapping sub score', fontsize=18)
         axes[row].set_ylabel(ft_sel, fontsize=18)
 
-    plt.suptitle(
-        f'{plot_title} (merged by {merge_method})',
-        size=24, x=.5, y=.92, ha='center',
-    )
+    if len(plot_title) > 1:
+        plt.suptitle(
+            f'{plot_title}',
+            size=24, x=.5, y=.92, ha='center',
+        )
     
     if figsave_name:
         
@@ -160,3 +142,44 @@ def plot_boxplot_feats_per_subscore(
         )
     if show: plt.show()
     if not show: plt.close()
+
+
+### RUN FROM COMMAND LINE
+
+if __name__ == '__main__':
+
+    from tap_extract_fts.main_featExtractionClass import FeatureSet, singleTrace
+
+    deriv_path = join(
+        utilsDatamng.get_local_proj_dir(),
+        'data', 'derivatives')
+
+    ftClass_file = sys.argv[1]
+    ftClass = utilsDatamng.load_class_pickle(
+        join(deriv_path, ftClass_file))
+    
+    if len(sys.argv) == 2:  # no fts_include defined, take default
+        sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass)
+    elif len(sys.argv) == 3:  # fts_include defined
+        sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass, fts_include=sys.argv[2])
+    
+    fig_fname = (
+        f'ftBoxplot_jerky_{sys.argv[1].split(".")[0]}_'
+        f'{dt.date.today().year}{dt.date.today().month}'
+        f'{dt.date.today().day}'
+    )
+
+    plot_boxplot_feats_per_subscore(
+        fts_include=ft_list,
+        sorted_feat_dict=sorted_feats,
+        # plot_title='',
+        figsave_name=fig_fname,
+        figsave_dir=join(
+            utilsDatamng.find_onedrive_path('figures'),
+            'fts_boxplots',
+        ),
+        show=False
+    )
+
+    
+    
