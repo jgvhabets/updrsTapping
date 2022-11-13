@@ -118,7 +118,7 @@ def updrsTapDetector(
                     blank_count = 0
                     tempi[6] = n
                     # always set first index of tap
-                    if np.isnan(tempi[0]):
+                    if np.isnan(tempi[0]) or tempi[0] == np.nan:
                         # if not detected, than use end of last tap
                         tempi[0] = end_last_tap_n + 1
 
