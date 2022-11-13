@@ -75,7 +75,7 @@ def aggregate_arr_fts(
     """
     assert method in [
         'mean', 'median', 'stddev', 'sum', 'variance',
-        'coefVar', 'trend_slope', 'trend_R'
+        'coefVar', 'IQR'
     ], f'Inserted method "{method}" is incorrect'
 
     if np.isnan(ft_array).any():
@@ -125,24 +125,17 @@ def aggregate_arr_fts(
 
         return np.var(ft_array)
 
-    elif method[:5] == 'trend':
+    elif method == 'IQR':
+        
+        ft_array = ft_array[~np.isnan(ft_array)]
 
-        try:
-            linreg = linregress(
-                np.arange(ft_array.shape[0]),
-                ft_array
-            )
-            slope, R = linreg[0], linreg[2]
+        if len(ft_array) < 4: return np.nan 
 
-            if np.isnan(slope):
-                slope = 0
+        qr25 = np.percentile(ft_array, 25)
+        qr75 = np.percentile(ft_array, 75)
+        IQR = qr75 - qr25
 
-            if method == 'trend_slope': return slope
-            if method == 'trend_R': return R
-
-        except ValueError:
-            
-            return 0
+        return IQR
 
 
 def normalize_var_fts(values):

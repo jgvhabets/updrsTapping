@@ -134,6 +134,14 @@ class tapFeatures:
                     method='coefVar',
                 )
             )
+            setattr(
+                self,
+                f'IQR_{ft}',
+                postExtrCalc.aggregate_arr_fts(
+                    ft_array=getattr(self, ft),
+                    method='IQR',
+                )
+            )
        
             setattr(
                 self,
