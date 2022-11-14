@@ -2,15 +2,10 @@
 
 # Import public packages and functions
 import numpy as np
-import os
-import pandas as pd
 from scipy.signal import find_peaks
-from scipy.stats import variation
-from datetime import datetime, timedelta
-from itertools import compress
+
 
 # Import own functions
-import tap_load_data.tapping_preprocess as preprocess
 from tap_load_data.tapping_impact_finder import find_impacts
 from tap_extract_fts.tapping_featureset import signalvectormagn
    
@@ -47,6 +42,7 @@ def updrsTapDetector(
     """
     # select and remove timepoints with nans
     nans_removed = False
+
     if np.isnan(acc_triax).any().any():
         # get timepoints with any nans in all 3 axes
         sel = ~np.isnan(acc_triax).any(axis=0)
@@ -71,7 +67,7 @@ def updrsTapDetector(
         'cutoff_time': .25,
     }
 
-    impacts = find_impacts(svm, fs)  # svm impacts are mot robust, regardless of main ax
+    impacts = find_impacts(svm, fs)  # svm-impacts are more robust, regardless of main ax
 
     posPeaks = find_peaks(
         sig,
@@ -97,7 +93,7 @@ def updrsTapDetector(
     # [startUP, fastestUp, stopUP, startDown, fastestDown, impact, stopDown]
     tempi = empty_timelist.copy()
     state = 'lowRest'
-    post_impact_blank = int(fs / 1000 * 15)  # 15 msec
+    post_impact_blank = int(fs / 1000 * 15)  # last int defines n ms
     blank_count = 0
     end_last_tap_n = 0  # needed for backup filling of tap-start-index
 
@@ -105,6 +101,7 @@ def updrsTapDetector(
     for n, y in enumerate(sig[:-1]):
 
         if n in impacts:
+
             state = 'impact'
             tempi[5] = n
         
@@ -118,14 +115,15 @@ def updrsTapDetector(
                     blank_count = 0
                     tempi[6] = n
                     # always set first index of tap
-                    if np.isnan(tempi[0]) or tempi[0] == np.nan:
+                    if np.isnan(tempi[0]):
                         # if not detected, than use end of last tap
-                        tempi[0] = end_last_tap_n + 1
+                        tempi[0] = end_last_tap_n + 5
 
                     tapi.append(np.array(tempi))  # add detected tap-indices as array
+                    end_last_tap_n = tempi[6]  # update last impact n to possible fill next start-index
+
                     tempi = empty_timelist.copy()  # start with new empty list
                     state='lowRest'  # reset state
-                    end_last_tap_n = tempi[6]  # update last impact n to possible fill next start-index
                     
 
         elif state == 'lowRest':
