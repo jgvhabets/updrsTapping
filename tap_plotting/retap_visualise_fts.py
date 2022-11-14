@@ -20,9 +20,11 @@ from retap_utils import utils_dataManagement as utilsDatamng
 def sort_fts_on_tapScore(
     ftClass,
     fts_include: list = [
-        # 'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'decr_tapRMSnrm', 'slope_tapRMSnrm',
-        # 'mean_intraTapInt', 'coefVar_intraTapInt', 'decr_intraTapInt', 'slope_intraTapInt',
-        'mean_jerkiness', 'coefVar_jerkiness', 'decr_jerkiness', 'slope_jerkiness',
+        'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'IQR_tapRMSnrm', 'decr_tapRMSnrm', 'slope_tapRMSnrm', 
+        'mean_raise_velocity', 'coefVar_raise_velocity', 'IQR_raise_velocity', 'decr_raise_velocity', 'slope_raise_velocity',
+        'mean_intraTapInt', 'coefVar_intraTapInt', 'IQR_intraTapInt', 'decr_intraTapInt', 'slope_intraTapInt',
+        'mean_jerkiness', 'coefVar_jerkiness', 'IQR_jerkiness', 'decr_jerkiness', 'slope_jerkiness',
+        'mean_jerkiness_smooth', 'coefVar_jerkiness_smooth', 'IQR_jerkiness_smooth', 'decr_jerkiness_smooth', 'slope_jerkiness_smooth'
     ],
 ):
     """
@@ -67,7 +69,7 @@ def sort_fts_on_tapScore(
                 print(f'{trace}\nattributes: {vars(traceClass.fts).keys()}')
                 raise AttributeError
 
-            ft_per_score[tap_score].append(ft_score)
+            if ~np.isnan(ft_score): ft_per_score[tap_score].append(ft_score)
 
         feat_dict_out[ft_sel] = ft_per_score
 
@@ -147,7 +149,19 @@ def plot_boxplot_feats_per_subscore(
 ### RUN FROM COMMAND LINE
 
 if __name__ == '__main__':
+    """
+    function is called in terminal with:
 
+    python -m tap_plotting.retap_visualise_fts "ftClass_ALL.P"
+    
+        - -m needs to be added bcs the file is called within a method/folder from current work dir
+        - second argument is filename of pickle saved class
+        - if third argument is given, this is the ft-list to include
+            (if not given it is extracted by default in sort_fts_on_tapScore()) 
+    """
+    assert len(sys.argv) > 1, ('Define at least second variable with pickle-filename')
+
+    # import original classes to load feature class-pickle
     from tap_extract_fts.main_featExtractionClass import FeatureSet, singleTrace
 
     deriv_path = join(
@@ -158,15 +172,20 @@ if __name__ == '__main__':
     ftClass = utilsDatamng.load_class_pickle(
         join(deriv_path, ftClass_file))
     
+    ft_to_plot = 'jerkiness_smooth'  # tapRMSnrm, raise_velocity, intraTapInt, jerkiness, jerkiness_smooth
+    metrics = 'mean', 'coefVar', 'IQR', 'decr', 'slope',
+    fts_include = [f'{m}_{ft_to_plot}' for m in metrics]
+    
     if len(sys.argv) == 2:  # no fts_include defined, take default
-        sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass)
+        sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass, fts_include=fts_include)
     elif len(sys.argv) == 3:  # fts_include defined
         sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass, fts_include=sys.argv[2])
     
+    
     fig_fname = (
-        f'ftBoxplot_jerky_{sys.argv[1].split(".")[0]}_'
         f'{dt.date.today().year}{dt.date.today().month}'
-        f'{dt.date.today().day}'
+        f'{dt.date.today().day}_ftBoxplot_'
+        f'{ft_to_plot}_{sys.argv[1].split(".")[0]}_'
     )
 
     plot_boxplot_feats_per_subscore(

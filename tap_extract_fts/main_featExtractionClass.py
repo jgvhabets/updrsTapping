@@ -267,16 +267,18 @@ class singleTrace:
 
 
 ### PUT IN SEPERATE PY FILE  
+import datetime as dt
 # import os
-
 # import retap_utils.utils_dataManagement as utils_dataMangm
 
 if __name__ == '__main__':
     """
     run from main repo path as:
+
         python -m tap_extract_fts.main_featExtractionClass
-    -m is there because it is ran from a module/package 
-    (within a folder)
+    
+        -m is there because it is ran from a module/package 
+        (within a folder)
     """
     data = FeatureSet(
         # subs_incl = ['BER056', ],
@@ -289,10 +291,14 @@ if __name__ == '__main__':
         'data',
         'derivatives'
     )
+    fname = (f'ftClass_ALL_{dt.date.today().year}'
+        f'{dt.date.today().month}{dt.date.today().day}')
+    
+
     utils_dataMangm.save_class_pickle(
         class_to_save=data,
         path=deriv_path,
-        filename='ftClass_ALL',
+        filename=fname,
     )
 
 

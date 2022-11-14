@@ -113,7 +113,11 @@ class tapFeatures:
 
         ### POST-EXTRACTION ANALYSIS
         fts_to_postExtr_calc = [
-            'tapRMSnrm', 'intraTapInt', 'jerkiness',
+            'tapRMSnrm',
+            'raise_velocity',
+            'intraTapInt',
+            'jerkiness',
+            'jerkiness_smooth',
         ]
 
         for ft in fts_to_postExtr_calc:
