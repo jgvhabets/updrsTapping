@@ -29,7 +29,8 @@ def select_traces_and_feats(
     if use_sel_fts:
         feats = [
         'nTaps', 'freq',
-        'coefVar_intraTapInt', 'coefVar_jerkiness',
+        'mean_intraTapInt', 'coefVar_intraTapInt',
+        'mean_jerkiness', 'IQR_jerkiness', 'coefVar_jerkiness',
         'mean_raise_velocity', 'coefVar_raise_velocity',
         'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'slope_tapRMSnrm', 
     ]
