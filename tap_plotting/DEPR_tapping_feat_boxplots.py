@@ -12,7 +12,7 @@ from itertools import compress
 from os.path import join
 
 # Import own fucntions
-from tap_extract_fts.tapping_feat_calc import aggregate_arr_fts
+from tap_extract_fts.tapping_postFeatExtr_calc import aggregate_arr_fts
 
 
 def combineFeatsPerScore(
