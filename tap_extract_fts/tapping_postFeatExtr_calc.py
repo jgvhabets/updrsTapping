@@ -38,7 +38,11 @@ def ft_decrement(
         f'decrement calc should be in {avail_methods}'
     )
 
-    if len(ft_array) < 10:
+    # if there is no array of feature-score given, return nan
+    if not isinstance(ft_array, np.ndarray):
+        return np.nan
+
+    if len(ft_array) < 8:
             
         return np.nan
 
@@ -52,7 +56,7 @@ def ft_decrement(
 
         # decrement is difference between end and start
         # normalised against 90-perc of max amplitude
-        decr = (endMean - startMean) / startMean
+        decr = (startMean - endMean) / startMean
 
         return decr
 
@@ -78,13 +82,14 @@ def aggregate_arr_fts(
         'coefVar', 'IQR'
     ], f'Inserted method "{method}" is incorrect'
 
+    # if there is no array of feature-score given, return nan
+    if not isinstance(ft_array, np.ndarray):
+        return np.nan
+    
     if np.isnan(ft_array).any():
 
         ft_array = ft_array[~np.isnan(ft_array)]
 
-    if ft_array.size == 0:
-        print('artificial 0 added')
-        return np.nan
 
     if method == 'allin1':
 

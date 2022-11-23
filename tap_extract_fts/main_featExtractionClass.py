@@ -228,7 +228,7 @@ class singleTrace:
 
         # set data to attribute (3 rows, n-samples columns)
         setattr(self, 'acc_sig', dat)
-
+        
         # extract sample freq if given
         fpart = self.filepath.split('_')[-1]
         fs = fpart.lower().split('hz')[0]
@@ -273,7 +273,7 @@ import datetime as dt
 
 if __name__ == '__main__':
     """
-    run from main repo path as:
+    run from main repo path on WINDOWS and macOS as:
 
         python -m tap_extract_fts.main_featExtractionClass
     

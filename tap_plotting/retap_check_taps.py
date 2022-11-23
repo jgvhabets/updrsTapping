@@ -9,7 +9,7 @@ contain one class with attribute fts, per 10-sec trace
 import numpy as np
 import matplotlib.pyplot as plt
 from os.path import join, exists
-from os import mkdir
+from os import makedirs
 
 # Import own fucntions
 from retap_utils.utils_dataManagement import get_local_proj_dir
@@ -28,7 +28,7 @@ def plot_detected_taps(
         'figures',
         'tap_find_check', 'v2'
     )
-    if not exists(savepath): mkdir(savepath)
+    if not exists(savepath): makedirs(savepath)
 
     for trace in ftClass.incl_traces:
 
@@ -38,6 +38,7 @@ def plot_detected_taps(
         taps = [t[0] for t in testrun.fts.tapDict]
 
         x_samples = np.arange(accsig.shape[1])
+
         plt.plot(accsig.T, alpha=.3, label=['x', 'y', 'z'])
 
         plt.scatter(taps, [3] * len(taps), label='tap-starts')
@@ -63,7 +64,7 @@ def plot_detected_taps(
 
         plt.legend(loc='lower center', ncol=4)
 
-        plt.title(trace)
+        plt.title(f'{trace}   ({testrun.tap_score})')
 
         plt.savefig(
             join(savepath, f'{trace}_tap_check'),

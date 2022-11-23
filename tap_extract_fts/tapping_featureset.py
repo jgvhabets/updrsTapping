@@ -128,18 +128,18 @@ def RMS_extraction(
         )
 
     assert acc_select in ['svm', 'axis'], (
-        f'acc_select is incorrect ({acc_sel}'
+        f'acc_select is incorrect ({acc_select}'
         '), should be "svm" or "axis".'
     )
 
     if acc_select == 'axis': sig = triax_arr[ax]
     elif acc_select == 'svm': sig = signalvectormagn(triax_arr)
 
-    if unit_to_assess == 'run':        
+    if unit_to_assess == 'run':
         RMS = calc_RMS(sig)
         if to_norm: RMS /= (len(sig) / fs)  # normalise RMS against duration in sec
 
-        return RMS_uniax, RMS_triax
+        return RMS
     
     else:
         RMS = np.zeros(len(sig))
@@ -262,7 +262,7 @@ def jerkiness(
             lised against the tap/trace duration
     """
     assert unit_to_assess in ['trace', 'taps'], print(
-        f'given unit_to_asses ({unit_to_asses}) is incorrect'
+        f'given unit_to_asses ({unit_to_assess}) is incorrect'
     )
 
     if unit_to_assess == 'trace':

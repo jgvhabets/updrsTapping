@@ -226,6 +226,9 @@ def save_class_pickle(
     filename,
     extension='.P',
 ):
+
+    if not os.path.exists(path): os.makedirs(path)
+    
     pickle_path = os.path.join(
         path, filename + extension
     )

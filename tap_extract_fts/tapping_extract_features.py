@@ -57,10 +57,6 @@ class tapFeatures:
             self.tapDict, self.fs
         )
 
-        # self.runRMS_ax, self.runRMS_svm = tap_feats.RMS_extraction(
-        #     self.tapDict, self.triax_arr, select='run', ax=ax,
-        # )
-        
         self.tapRMS = tap_feats.RMS_extraction(
             self.tapDict,
             self.triax_arr,
@@ -92,7 +88,7 @@ class tapFeatures:
             self.tapDict, self.triax_arr, ax=ax,
         )  # currently only velocity raising based on svm
         
-        self.jerkiness = tap_feats.jerkiness(
+        self.jerkiness_taps = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
             tapDict=self.tapDict,
@@ -100,12 +96,12 @@ class tapFeatures:
             smooth_samples=0,
         )
 
-        self.jerkiness_smooth = tap_feats.jerkiness(
+        self.jerkiness_trace = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
             tapDict=self.tapDict,
-            unit_to_assess='taps',
-            smooth_samples=5,
+            unit_to_assess='trace',
+            smooth_samples=0,
         )
 
         if type(self.updrsSubScore) == str or np.str_:
@@ -113,11 +109,12 @@ class tapFeatures:
 
         ### POST-EXTRACTION ANALYSIS
         fts_to_postExtr_calc = [
+            'tapRMS',
             'tapRMSnrm',
+            'impactRMS',
             'raise_velocity',
             'intraTapInt',
-            'jerkiness',
-            'jerkiness_smooth',
+            'jerkiness_taps',
         ]
 
         for ft in fts_to_postExtr_calc:

@@ -172,9 +172,12 @@ if __name__ == '__main__':
     ftClass = utilsDatamng.load_class_pickle(
         join(deriv_path, ftClass_file))
     
-    ft_to_plot = 'jerkiness_smooth'  # tapRMSnrm, raise_velocity, intraTapInt, jerkiness, jerkiness_smooth
+    ft_to_plot = 'intraTapInt'  # tapRMS, tapRMSnrm, raise_velocity, intraTapInt, jerkiness_tap
     metrics = 'mean', 'coefVar', 'IQR', 'decr', 'slope',
     fts_include = [f'{m}_{ft_to_plot}' for m in metrics]
+    
+    # ft_to_plot = 'nTaps_jerkinessTrace'
+    # fts_include = ['jerkiness_trace', 'nTaps']
     
     if len(sys.argv) == 2:  # no fts_include defined, take default
         sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass, fts_include=fts_include)
@@ -185,8 +188,8 @@ if __name__ == '__main__':
     fig_fname = (
         f'{dt.date.today().year}{dt.date.today().month}'
         f'{dt.date.today().day}_ftBoxplot_'
-        f'{ft_to_plot}_{sys.argv[1].split(".")[0]}_'
-    )
+        f'{ft_to_plot}'
+    )  # add originating pickle file in image {sys.argv[1].split(".")[0]}
 
     plot_boxplot_feats_per_subscore(
         fts_include=ft_list,
