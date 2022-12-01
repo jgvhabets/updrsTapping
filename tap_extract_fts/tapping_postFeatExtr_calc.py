@@ -56,7 +56,7 @@ def ft_decrement(
 
         # decrement is difference between end and start
         # normalised against 90-perc of max amplitude
-        decr = (startMean - endMean) / startMean
+        decr = (endMean - startMean) / startMean
 
         return decr
 

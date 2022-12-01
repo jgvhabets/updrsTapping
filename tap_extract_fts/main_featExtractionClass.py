@@ -291,8 +291,9 @@ if __name__ == '__main__':
         'data',
         'derivatives'
     )
-    fname = (f'ftClass_ALL_{dt.date.today().year}'
-        f'{dt.date.today().month}{dt.date.today().day}')
+    dd = str(dt.date.today().day).zfill(2)
+    mm = str(dt.date.today().month).zfill(2)
+    fname = (f'ftClass_ALL_{dt.date.today().year}{mm}{dd}')
     
 
     utils_dataMangm.save_class_pickle(

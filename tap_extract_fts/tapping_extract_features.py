@@ -91,7 +91,7 @@ class tapFeatures:
         self.jerkiness_taps = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
-            tapDict=self.tapDict,
+            tap_indices=self.tapDict,
             unit_to_assess='taps',
             smooth_samples=0,
         )
@@ -99,7 +99,7 @@ class tapFeatures:
         self.jerkiness_trace = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
-            tapDict=self.tapDict,
+            tap_indices=self.tapDict,
             unit_to_assess='trace',
             smooth_samples=0,
         )

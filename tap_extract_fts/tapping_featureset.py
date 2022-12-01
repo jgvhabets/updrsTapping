@@ -8,6 +8,26 @@ from scipy.ndimage import uniform_filter1d
 # Import own functions
 # from tap_load_data import tapping_preprocess
 
+def nan_ft_array_base(
+    tap_indices: list,
+    length_minus_one: bool = False):
+    """"
+    Create empy nan-array with length
+    of number of taps to store features in
+
+    Input:
+        - tap_indices: list of arraus with indices
+            of movement moments per tap
+        - length_minus_one: create length number of
+            taps minus one, for features representing
+            differences between taps 
+    """
+    if length_minus_one:
+        ft_base = np.array([np.nan] * (len(tap_indices) - 1))
+    else:
+        ft_base = np.array([np.nan] * len(tap_indices))
+
+    return ft_base
 
 def signalvectormagn(acc_arr):
     """
@@ -33,7 +53,7 @@ def signalvectormagn(acc_arr):
 
 
 def intraTapInterval(
-    tapDict: dict,
+    tap_indices: list,
     fs: int,
     moment: str = 'impact'
 ):
@@ -41,7 +61,8 @@ def intraTapInterval(
     Calculates intratap interval.
 
     Input:
-        - tapDict: dict with lists resulting
+        - tap_indices: list with arrays of tap-moment
+            indices, representing respectively:
             [startUP, fastestUp, stopUP, startDown,
             fastestDown, impact, stopDown]
             (result of updrsTapDetector())
@@ -61,11 +82,11 @@ def intraTapInterval(
     elif moment.lower() == 'impact': idx = -2
     elif moment.lower() == 'end': idx = -1
     
-    iti = np.array([np.nan] * (len(tapDict) - 1))
+    iti = nan_ft_array_base(tap_indices, length_minus_one=True)
 
-    for n in np.arange(len(tapDict) - 1):
+    for n in np.arange(len(tap_indices) - 1):
         # take distance between two impact-indices
-        distance = tapDict[n + 1][idx] - tapDict[n][idx]
+        distance = tap_indices[n + 1][idx] - tap_indices[n][idx]
     
         iti[n] = distance / fs  # from samples to seconds
     
@@ -74,7 +95,7 @@ def intraTapInterval(
 
 def calc_RMS(acc_signal):
     """
-    Calculate RMS over preselected uniaxial
+    Calculate RMS over total
     acc-signal (can be uni-axis or svm)
     """
     S = np.square(acc_signal)
@@ -85,7 +106,7 @@ def calc_RMS(acc_signal):
 
 
 def RMS_extraction(
-    tapDict,
+    tap_indices: list,
     triax_arr,
     acc_select: str,
     ax,
@@ -98,7 +119,7 @@ def RMS_extraction(
     Calculates RMS of full acc-signal per tap.
 
     Input:
-        - tapDict: dict with list of indices
+        - tap_indices: list of arrays with indices
             representing tap [startUP, fastestUp,
             stopUP, startDown, fastestDown, impact,
             stopDown] (result of updrsTapDetector())
@@ -142,9 +163,10 @@ def RMS_extraction(
         return RMS
     
     else:
-        RMS = np.zeros(len(sig))
+        RMS = nan_ft_array_base(tap_indices)
 
-        for n, tap in enumerate(tapDict):
+        for n, tap in enumerate(tap_indices):
+
             tap = tap.astype(int)  # np.nan as int is -999999...
 
             if unit_to_assess == 'taps':
@@ -169,14 +191,14 @@ def RMS_extraction(
         return RMS
 
 
-def velocity_raising(tapDict, triax_arr, ax):
+def velocity_raising(tap_indices, triax_arr, ax):
     """
     Calculates velocity approximation via
     area under the curve of acc-signal within
     upwards part of a tap.
 
     Input:
-        - tapDict
+        - tap_indices
         - triax_arr
         - ax (int): main tap axis index
     
@@ -187,31 +209,31 @@ def velocity_raising(tapDict, triax_arr, ax):
     # ax = triax_arr[ax]
     svm = signalvectormagn(triax_arr)
 
-    # upVelo_uniax = velo_calc_auc(tapDict, ax)
-    upVelo_triax = velo_calc_auc(tapDict, svm)
+    # upVelo_uniax = velo_calc_auc(tap_indices, ax)
+    upVelo_triax = velo_calc_auc(tap_indices, svm)
     
     return upVelo_triax
 
 
-def velo_calc_auc(tapDict, accSig,):
+def velo_calc_auc(tap_indices, accSig,):
     """
     Calculates max velocity during finger-raising
     based on the AUC from the first big pos peak
     in one tap until the acceleration drops below 0
 
     Input:
-        - tapDict: dict with lists resulting
+        - tap_indices: dict with lists resulting
             [startUP, fastestUp, stopUP, startDown,
             fastestDown, impact, stopDown]
             (result of updrsTapDetector())
         - accSig (array): uniax acc-array (one ax or svm)
     
     Returns:
-        - out (array): one value or nan per tap in tapDict
+        - out (array): one value or nan per tap in tap_indices
     """
     out = []
 
-    for n, tap in enumerate(tapDict):
+    for n, tap in enumerate(tap_indices):
 
         if ~np.isnan(tap[1]):  # crossing 0 has to be known
             # take acc-signal [start : fastest point] of rise
@@ -229,7 +251,7 @@ def velo_calc_auc(tapDict, accSig,):
 def jerkiness(
     accsig,
     fs: int,
-    tapDict: dict,
+    tap_indices: list,
     unit_to_assess: str,
     n_hop: int = 1,
     smooth_samples: int = 0,
@@ -246,7 +268,7 @@ def jerkiness(
         - accsig (array): tri-axial acceleration
             signal from e.g. 10-s tapping
         - fs: sample freq
-        - tapDict: dict with lists of tap-timing-indices
+        - tap_indices: list with arrays of tap-timing-indices
         - unit_to_assess: calculated per tap or per
             whole trace
         - n_hop (int): the number of samples used
@@ -288,7 +310,7 @@ def jerkiness(
 
         trace_count = []
 
-        for tap in tapDict:
+        for tap in tap_indices:
 
             if np.logical_or(
                 np.isnan(tap[0]),
