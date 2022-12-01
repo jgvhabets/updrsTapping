@@ -172,7 +172,7 @@ if __name__ == '__main__':
     ftClass = utilsDatamng.load_class_pickle(
         join(deriv_path, ftClass_file))
     
-    ft_to_plot = 'intraTapInt'  # tapRMS, tapRMSnrm, raise_velocity, intraTapInt, jerkiness_tap
+    ft_to_plot = 'tapRMSnrm'  # tapRMS, tapRMSnrm, raise_velocity, intraTapInt, jerkiness_tap
     metrics = 'mean', 'coefVar', 'IQR', 'decr', 'slope',
     fts_include = [f'{m}_{ft_to_plot}' for m in metrics]
     
@@ -184,11 +184,11 @@ if __name__ == '__main__':
     elif len(sys.argv) == 3:  # fts_include defined
         sorted_feats, ft_list = sort_fts_on_tapScore(ftClass=ftClass, fts_include=sys.argv[2])
     
-    
+    dd = str(dt.date.today().day).zfill(2)
+    mm = str(dt.date.today().month).zfill(2)
     fig_fname = (
-        f'{dt.date.today().year}{dt.date.today().month}'
-        f'{dt.date.today().day}_ftBoxplot_'
-        f'{ft_to_plot}'
+        f'{dt.date.today().year}{mm}{dd}'
+        f'_ftBoxplot_{ft_to_plot}'
     )  # add originating pickle file in image {sys.argv[1].split(".")[0]}
 
     plot_boxplot_feats_per_subscore(
