@@ -261,7 +261,7 @@ class singleTrace:
                 triax_arr=self.acc_sig,
                 fs=self.fs,
                 impacts=self.impact_idx,
-                tapDict=tap_idx,
+                tap_lists=tap_idx,
                 updrsSubScore=self.tap_score,
             )
 

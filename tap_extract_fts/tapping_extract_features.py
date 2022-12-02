@@ -28,15 +28,21 @@ class tapFeatures:
         - fs (int): sample freq in Hz
         - impacts (array): array containing indices of
             impact (closing finger) moments
-        - tapDict: list of taps with lists of 6 taptimes
-            resulting from continuous tapping detect function
+        - tap_lists: list of taps, every tap has an own array
+            with 7 timestamps (in n samples) representing the
+            moments during a tap (resulting from continuous
+            tapping detect function)
+        - max_n_taps_incl: integer defining the number of taps
+            consider during ft extraction, defaults to zero,
+            and is not considered when being zero.
         - updrsSubScore: UPDRS III Fingertapping subscore
             corresponding to acc signal, default False
     """
     triax_arr: Any
     fs: int
     impacts: Any
-    tapDict: dict = field(default_factory=dict)
+    tap_lists: dict = field(default_factory=dict)
+    max_n_taps_incl: int = 0
     updrsSubScore: Any = False
     
     def __post_init__(self,):
@@ -46,19 +52,22 @@ class tapFeatures:
 
         ax = find_main_axis(self.triax_arr, method='variance',)
 
-        self.nTaps = len(self.impacts)
+        self.total_nTaps = len(self.impacts)
         
         self.freq = self.nTaps / (
             self.triax_arr.shape[1] / self.fs)
         
         self.tap_durations = np.diff(self.impacts) / self.fs
+
+        if self.max_n_taps_incl > 0:
+            setattr(self, 'tap_lists', self.tap_lists[:self.max_n_taps_incl])
         
         self.intraTapInt = tap_feats.intraTapInterval(
-            self.tapDict, self.fs
+            self.tap_lists, self.fs
         )
 
         self.tapRMS = tap_feats.RMS_extraction(
-            self.tapDict,
+            self.tap_lists,
             self.triax_arr,
             acc_select='svm',
             unit_to_assess='taps',
@@ -66,7 +75,7 @@ class tapFeatures:
         )
 
         self.tapRMSnrm = tap_feats.RMS_extraction(
-            self.tapDict,
+            self.tap_lists,
             self.triax_arr,
             acc_select='svm',
             unit_to_assess='taps',
@@ -76,7 +85,7 @@ class tapFeatures:
         )
 
         self.impactRMS = tap_feats.RMS_extraction(
-            self.tapDict,
+            self.tap_lists,
             self.triax_arr,
             acc_select='svm',
             unit_to_assess='impacts',
@@ -85,13 +94,13 @@ class tapFeatures:
         )
 
         self.raise_velocity = tap_feats.velocity_raising(
-            self.tapDict, self.triax_arr, ax=ax,
+            self.tap_lists, self.triax_arr, ax=ax,
         )  # currently only velocity raising based on svm
         
         self.jerkiness_taps = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
-            tap_indices=self.tapDict,
+            tap_indices=self.tap_lists,
             unit_to_assess='taps',
             smooth_samples=0,
         )
@@ -99,7 +108,7 @@ class tapFeatures:
         self.jerkiness_trace = tap_feats.jerkiness(
             accsig=self.triax_arr,
             fs=self.fs,
-            tap_indices=self.tapDict,
+            tap_indices=self.tap_lists,
             unit_to_assess='trace',
             smooth_samples=0,
         )
@@ -150,6 +159,7 @@ class tapFeatures:
                 postExtrCalc.ft_decrement(
                     ft_array=getattr(self, ft),
                     method='diff_in_mean',
+                    n_taps_mean=3,
                 )
             )
             setattr(
