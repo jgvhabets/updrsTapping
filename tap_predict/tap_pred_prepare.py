@@ -9,10 +9,14 @@ in training and test sets
 import numpy as np
 import pandas as pd
 
+# own functions
+from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array
+
 def select_traces_and_feats(
     ftClass,
     center: str = 'all',
     use_sel_fts=True,
+    excl_traces: list = [],
 ):
     assert center.upper() in ['ALL', 'BER', 'DUS'], (
         'defined center must be "all", "ber", or "dus"'
@@ -35,62 +39,92 @@ def select_traces_and_feats(
         'mean_tapRMS', 'coefVar_tapRMS', 'slope_tapRMS', 
     ]
 
-    zero_taps = []
-
     avail_traces = ftClass.incl_traces
+    # filter out traces if defined
+    if len(excl_traces) > 0:
+        avail_traces = [
+            t for t in avail_traces
+            if t not in excl_traces
+        ]
+
+    # select out traces without detected taps
+    zero_taps = []
     if len(zero_taps) > 0:
         avail_traces = [t for t in avail_traces if t not in zero_taps]
-
+    # select on center
     if center.upper() == 'BER' or center.upper() == 'DUS':
         avail_traces = [t for t in avail_traces if center.upper() in t]
 
     return avail_traces, feats
 
+
+
 def create_X_y_vectors(
-    ftClass, incl_traces, incl_feats,
+    ftClass,
+    incl_feats,
+    incl_traces,
+    excl_traces: list = [],
     to_norm: bool = False,
+    to_zscore: bool = False,
 ):
-    # df for feature (X)
-    X_df = pd.DataFrame(
-        data=np.zeros((
-            len(incl_traces),
-            len(incl_feats)
-        )),
-        columns=incl_feats,
+    """
+    
+    """
+    assert to_norm == False or to_zscore == False, (
+        'to_norm AND to_zscore can NOT both be True'
     )
-    index_order = incl_traces
+    # filter out traces if defined
+    if len(excl_traces) > 0:
+        incl_traces = [
+            t for t in incl_traces
+            if t not in excl_traces
+        ]
 
-    # aray for outcome (updrs subscores)
-    y = np.array(len(incl_traces) * [np.nan])
-    # fill y with values
-    for i, trace in enumerate(incl_traces):
-        y[i] = getattr(ftClass, trace).tap_score
+    # fill outcome array y with updrs subscores
+    y = [getattr(ftClass, t).tap_score for t in incl_traces]
+    # y = np.array([y]).T
+    y = np.array(y)
 
-    # fill X with ft-values    
-    for i, trace in enumerate(incl_traces):
+    # create X matrixc with input features
+    X = []
+    ft_dict = {}  # fill a preversion dict of X with ft-values
+    for ft in incl_feats: ft_dict[ft] = []
 
-        traceClass = getattr(ftClass, trace)
-        
-        for ft in X_df.keys():
-        
-            X_df.iloc[i][ft] = getattr(traceClass.fts, ft) 
+    for trace in incl_traces:
+        trace_fts = getattr(ftClass, trace).fts
+
+        for ft in incl_feats:
+            ft_dict[ft].append(getattr(trace_fts, ft))
+            # except KeyError: print(trace, ft)
+            
+    for ft in incl_feats:
+        X.append(ft_dict[ft])
+
+    X = np.array(X).T
+
+    assert X.shape[0] == y.shape[0], ('X and y have '
+        'different 1st-dimension')
 
     # Normalise vector per array-feature over all samples
     if to_norm:
-        for ft in X_df.keys():
-            vec_max = np.nanmax(X_df[ft])
-            X_df[ft] = X_df[ft] / vec_max
+        for ft_i in range(X.shape[1]):
+            vec_max = np.nanmax(X[:, ft_i])
+            X[:, ft_i] = X[:, ft_i] / vec_max
+    # Standardise vector per array-feature over all samples
+    elif to_zscore:
+        for ft_i in range(X.shape[1]):
+            X[:, ft_i] = z_score_array(X[:, ft_i])
+    
 
     # deal with missings
     # for now set all to zero, ideally: avoid zeros in extraction
-    X = X_df.values
-
     nan_mask = np.isnan(X)
+    print(f'# of NaNs per feat: {sum(nan_mask)}')
     X[nan_mask] = 0
 
     assert np.isnan(X).any() == False, print(
         'X array contains missing values:\n',
-        np.isnan(X_df).any()
+        np.isnan(X).any()
     )
 
     return X, y

@@ -288,7 +288,7 @@ if __name__ == '__main__':
         # subs_incl = ['BER056', ],
         centers_incl = ['BER', 'DUS'],   # 'DUS'
         verbose=False,
-        max_n_taps_incl=10,
+        # max_n_taps_incl=10,
     )
 
     deriv_path = os.path.join(
@@ -299,7 +299,7 @@ if __name__ == '__main__':
     dd = str(dt.date.today().day).zfill(2)
     mm = str(dt.date.today().month).zfill(2)
     yyyy = dt.date.today().year
-    fname = f'ftClass_ALL_max10_{yyyy}{mm}{dd}'
+    fname = f'ftClass_ALL_{yyyy}{mm}{dd}'
     
 
     utils_dataMangm.save_class_pickle(

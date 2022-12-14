@@ -19,8 +19,9 @@ def ft_decrement(
     Positive decrement means increase in feature,
     negative decrement means decrease over time.
 
-    If less than 10 tap-values available, np.nan
-    is returned
+    If less than 10 tap-values available, zeroes
+    are returned (no nan's for prediction analysis
+    functionality)
 
     Inputs:
         - ft_array: feature values (one per tap), to
@@ -40,11 +41,11 @@ def ft_decrement(
 
     # if there is no array of feature-score given, return nan
     if not isinstance(ft_array, np.ndarray):
-        return np.nan
+        return 0
 
     if len(ft_array) < 8:
             
-        return np.nan
+        return 0
 
     # loop over arrays with amp-values
     if method == 'diff_in_mean':
@@ -52,7 +53,7 @@ def ft_decrement(
         startMean = np.nanmean(ft_array[:n_taps_mean])
         endMean = np.nanmean(ft_array[-n_taps_mean:])
 
-        if np.isnan(startMean): return np.nan
+        if np.isnan(startMean): return 0
 
         # decrement is difference between end and start
         # normalised against 90-perc of max amplitude
@@ -67,7 +68,7 @@ def ft_decrement(
                 np.arange(len(ft_array)), ft_array, 1)
         except:
             if len(ft_array) == 1:
-                slope = np.nan
+                slope = 0
             else:
                 raise ValueError('Error in np.polyfit() clope-calc')
 
