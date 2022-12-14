@@ -33,7 +33,7 @@ def find_impacts(uni_arr, fs):
     """
     thresh = np.nanmax(uni_arr) * .2
     arr_diff = np.diff(uni_arr)
-    df_thresh = np.nanmax(arr_diff) * .35
+    df_thresh = np.nanmax(arr_diff) * .2  # was .35 (14.12)
     
     # ### METHOD v1
     # impacts1 = find_peaks(
@@ -50,6 +50,7 @@ def find_impacts(uni_arr, fs):
     pos_peaks = find_peaks(
         uni_arr,
         height=(thresh, np.nanmax(uni_arr)),
+        distance=fs / 6,  # was not defined (14.12)
     )[0]
 
     # select peaks with surrounding pos- or neg-DIFF-peak
@@ -62,7 +63,7 @@ def find_impacts(uni_arr, fs):
     
     impacts2 = delete_too_close_peaks(
         acc_ax=uni_arr, peak_pos=impacts2,
-        min_distance=fs / 10
+        min_distance=fs / 6,  # was 10 (14.12)
     )
 
     return impacts2

@@ -62,8 +62,14 @@ def ft_decrement(
 
     elif method == 'regr_slope':
         ft_array = ft_array[~np.isnan(ft_array)]  # exclude nans
-        slope, intercept = np.polyfit(
-            np.arange(len(ft_array)), ft_array, 1)
+        try:
+            slope, intercept = np.polyfit(
+                np.arange(len(ft_array)), ft_array, 1)
+        except:
+            if len(ft_array) == 1:
+                slope = np.nan
+            else:
+                raise ValueError('Error in np.polyfit() clope-calc')
 
         return slope
 
@@ -149,6 +155,15 @@ def normalize_var_fts(values):
     ft_out = values / ft_max
 
     return ft_out
+
+
+def z_score_array(array):
+
+    if isinstance(array, list): array = np.array(array)
+
+    z_array = (array - np.nanmean(array)) / np.nanstd(array)
+
+    return z_array
 
 
 def nan_array(dim: list):

@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import compress
 from os.path import join, exists
-from os import mkdir
+from os import makedirs
 import datetime as dt
 
 from sklearn.cluster import KMeans
@@ -19,30 +19,71 @@ from sklearn.decomposition import PCA
 
 # Import own functions
 from retap_utils import utils_dataManagement as utilsDatamng
+from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array
 
 # TODO: ANNOTATE ANALYSIS PARAMETERS IN LOWER RIGHT CORNER
 
-def plot_cluster_kMeans(
-    X, y,
+def get_kMeans_clusters(
+    X,
     n_clusters=2,
     use_pca=True,
+    z_score=False,
     random_state=27,
-    figsave_name: str='',
-    figsave_dir: str='',
-    show: bool=False
 ):
-    if not exists(figsave_dir): mkdir(figsave_dir)
+    """
+    Extract clusters (y_clusters) based on inserted value in X
 
-    pca = PCA(2)
-    X_pca = pca.fit_transform(X)
-    if use_pca: X = X_pca
+    Input:
+        - X: array of shape (n-samples, n-features)
+    
+    Returns:
+        - y_clusters (array): shape (n-samples, 1)
+        - cluster_centroids
+        - X_pca: if pca is used, otherwise None
+    """
+    if z_score:
+        for i_ft in range(X.shape[1]):
+            X[:, i_ft] = z_score_array(X[:, i_ft])
+
+    if use_pca:
+        pca = PCA(2)
+        X_pca = pca.fit_transform(X)
+        X = X_pca
+        plot_axes = X_pca
+    else:
+        plot_axes = X
 
     kmeans = KMeans(
         n_clusters=n_clusters,
         random_state=random_state
     )
     y_clust_labels = kmeans.fit_predict(X)
-    centroids = kmeans.cluster_centers_
+    cluster_centroids = kmeans.cluster_centers_
+
+    return y_clust_labels, cluster_centroids, plot_axes
+    
+
+def plot_cluster_kMeans(
+    X,
+    y,
+    n_clusters=2,
+    use_pca=True,
+    z_score=False,
+    alt_labels=['feature 1', 'feature 2'],
+    random_state=27,
+    figsave_name: str='',
+    figsave_dir: str='',
+    show: bool=False
+):
+    """
+    Plotting cluster with labeling on true labels
+    """
+    y_clust_labels, centroids, plot_axes = get_kMeans_clusters(
+        X=X, n_clusters=n_clusters,
+        use_pca=use_pca, z_score=z_score,
+        random_state=random_state,
+    )
+    
 
     score_cols = {
         0: 'green',
@@ -66,7 +107,7 @@ def plot_cluster_kMeans(
         marker = cl_markers[pred_clust]
 
         ax.scatter(
-            X_pca[i_row, 0], X_pca[i_row, 1],
+            plot_axes[i_row, 0], plot_axes[i_row, 1],
             label=f'Cluster-{pred_clust}, Tap-Score {score}',
             s=s, color=color, alpha=.7,
             marker=marker,
@@ -90,8 +131,11 @@ def plot_cluster_kMeans(
         bbox_to_anchor=[1.01, .95]
     )
 
-    ax.set_xlabel('PCA-1', fontsize=18)
-    ax.set_ylabel('PCA-2', fontsize=18)
+    if use_pca: xlab, ylab = ['PCA-1', 'PCA-2']
+    else: xlab, ylab = alt_labels
+
+    ax.set_xlabel(xlab, fontsize=18)
+    ax.set_ylabel(ylab, fontsize=18)
     ax.set_title(
         'kMeans Clustering 10-seconds of Finger Tapping',
         fontsize=20
@@ -100,6 +144,7 @@ def plot_cluster_kMeans(
     plt.tight_layout()
 
     if len(figsave_name) > 1:
+        if not exists(figsave_dir): makedirs(figsave_dir)
         plt.savefig(
             join(figsave_dir, figsave_name),
             dpi=150, facecolor='w',

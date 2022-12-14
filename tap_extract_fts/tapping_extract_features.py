@@ -47,14 +47,14 @@ class tapFeatures:
     
     def __post_init__(self,):
 
-        if len(self.tapDict) == 0:  # no taps detected
+        if len(self.tap_lists) == 0:  # no taps detected
             return
 
-        ax = find_main_axis(self.triax_arr, method='variance',)
+        ax = find_main_axis(self.triax_arr, method='minmax',)
 
         self.total_nTaps = len(self.impacts)
         
-        self.freq = self.nTaps / (
+        self.freq = self.total_nTaps / (
             self.triax_arr.shape[1] / self.fs)
         
         self.tap_durations = np.diff(self.impacts) / self.fs

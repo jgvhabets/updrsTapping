@@ -19,7 +19,7 @@ def select_traces_and_feats(
     )
         
     feats = [
-        'nTaps', 'freq',
+        'total_nTaps', 'freq',
         'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'IQR_tapRMSnrm', 'decr_tapRMSnrm', 'slope_tapRMSnrm', 
         'mean_raise_velocity', 'coefVar_raise_velocity', 'IQR_raise_velocity', 'decr_raise_velocity', 'slope_raise_velocity',
         'mean_intraTapInt', 'coefVar_intraTapInt', 'IQR_intraTapInt', 'decr_intraTapInt', 'slope_intraTapInt',
@@ -28,21 +28,18 @@ def select_traces_and_feats(
     ]
     if use_sel_fts:
         feats = [
-        'nTaps', 'freq',
-        'mean_intraTapInt', 'coefVar_intraTapInt',
-        'mean_jerkiness', 'IQR_jerkiness', 'coefVar_jerkiness',
-        'mean_raise_velocity', 'coefVar_raise_velocity',
-        'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'slope_tapRMSnrm', 
+        'freq', 'mean_intraTapInt', 'coefVar_intraTapInt',
+        'mean_jerkiness_taps', 'coefVar_jerkiness_taps', 'jerkiness_trace',
+        'mean_raise_velocity', 'coefVar_raise_velocity', 'slope_raise_velocity', 
+        'mean_tapRMSnrm', 'coefVar_tapRMSnrm', 'slope_tapRMSnrm',
+        'mean_tapRMS', 'coefVar_tapRMS', 'slope_tapRMS', 
     ]
 
-    zero_taps = [
-        'BER023_M1S0_R_3',
-        'DUS022_M0S0_L_1',
-        'DUS006_M0S0_L_1'
-    ]
+    zero_taps = []
 
     avail_traces = ftClass.incl_traces
-    avail_traces = [t for t in avail_traces if t not in zero_taps]
+    if len(zero_taps) > 0:
+        avail_traces = [t for t in avail_traces if t not in zero_taps]
 
     if center.upper() == 'BER' or center.upper() == 'DUS':
         avail_traces = [t for t in avail_traces if center.upper() in t]

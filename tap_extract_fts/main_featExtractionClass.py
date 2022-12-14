@@ -45,6 +45,7 @@ class FeatureSet:
     incl_meta_data: bool = True
     skipped_no_meta: list = field(default_factory=list)
     incl_traces: list = field(default_factory=list)
+    max_n_taps_incl: int = 0  # leads to inclusion of all detected taps
     verbose: bool = False
 
     def __post_init__(self,):
@@ -187,6 +188,7 @@ class FeatureSet:
                                 filepath=os.path.join(datapath, f),
                                 tap_score=tap_score,
                                 to_extract_feats=True,
+                                max_n_taps_incl=self.max_n_taps_incl,
                             )
                         )
 
@@ -208,6 +210,7 @@ class singleTrace:
     tap_score: Any
     goal_Fs: int = 250
     to_extract_feats: bool = True
+    max_n_taps_incl: int = 0  # leads to inclusion of all detected taps
 
     def __post_init__(self,):
         # load and store tri-axial ACC-signal
@@ -263,6 +266,7 @@ class singleTrace:
                 impacts=self.impact_idx,
                 tap_lists=tap_idx,
                 updrsSubScore=self.tap_score,
+                max_n_taps_incl=self.max_n_taps_incl,
             )
 
 
@@ -284,6 +288,7 @@ if __name__ == '__main__':
         # subs_incl = ['BER056', ],
         centers_incl = ['BER', 'DUS'],   # 'DUS'
         verbose=False,
+        max_n_taps_incl=10,
     )
 
     deriv_path = os.path.join(
@@ -293,7 +298,8 @@ if __name__ == '__main__':
     )
     dd = str(dt.date.today().day).zfill(2)
     mm = str(dt.date.today().month).zfill(2)
-    fname = (f'ftClass_ALL_{dt.date.today().year}{mm}{dd}')
+    yyyy = dt.date.today().year
+    fname = f'ftClass_ALL_max10_{yyyy}{mm}{dd}'
     
 
     utils_dataMangm.save_class_pickle(
