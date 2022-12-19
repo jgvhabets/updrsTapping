@@ -14,9 +14,10 @@ from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array
 
 def select_traces_and_feats(
     ftClass,
-    center: str = 'all',
+    center: str='all',
     use_sel_fts=True,
-    excl_traces: list = [],
+    excl_traces: list=[],
+    excl_subs: list=[],
 ):
     assert center.upper() in ['ALL', 'BER', 'DUS'], (
         'defined center must be "all", "ber", or "dus"'
@@ -46,6 +47,14 @@ def select_traces_and_feats(
             t for t in avail_traces
             if t not in excl_traces
         ]
+    
+    # filter out traces of subs to excl (if defined)
+    if len(excl_subs) > 0:
+        for sub_ex in excl_subs:
+            avail_traces = [
+                t for t in avail_traces
+                if sub_ex not in t
+            ]
 
     # select out traces without detected taps
     zero_taps = []
@@ -64,6 +73,7 @@ def create_X_y_vectors(
     incl_feats,
     incl_traces,
     excl_traces: list = [],
+    excl_subs: list=[],
     to_norm: bool = False,
     to_zscore: bool = False,
 ):
@@ -79,6 +89,14 @@ def create_X_y_vectors(
             t for t in incl_traces
             if t not in excl_traces
         ]
+    
+    # filter out traces of subs to excl (if defined)
+    if len(excl_subs) > 0:
+        for sub_ex in excl_subs:
+            incl_traces = [
+                t for t in incl_traces
+                if sub_ex not in t
+            ]
 
     # fill outcome array y with updrs subscores
     y = [getattr(ftClass, t).tap_score for t in incl_traces]
