@@ -8,6 +8,7 @@ in training and test sets
 # import public pacakges and functions
 import numpy as np
 import pandas as pd
+from dataclasses import dataclass, field
 
 # own functions
 from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array
@@ -67,6 +68,12 @@ def select_traces_and_feats(
     return avail_traces, feats
 
 
+@dataclass(init=True, repr=True,)
+class predictionData:
+    X: np.ndarray
+    y: np.ndarray
+    ids: np.ndarray=field(default_factory=np.array([]))
+
 
 def create_X_y_vectors(
     ftClass,
@@ -76,7 +83,10 @@ def create_X_y_vectors(
     excl_subs: list=[],
     to_norm: bool = False,
     to_zscore: bool = False,
+    to_mask_4: bool=False,
+    to_mask_0: bool=False,
     return_ids: bool=False,
+    as_class: bool=False,
 ):
     """
     create machine learning ready data set, X matrix
@@ -156,10 +166,77 @@ def create_X_y_vectors(
     print(f'# of NaNs per feat: {sum(nan_mask)}')
     X[nan_mask] = 0
 
+    if to_mask_4:
+        # Mask UPDRS 4 -> 3 merge (too low number)
+        mask = y == 4
+        y[mask] = 3
+
     assert np.isnan(X).any() == False, print(
         'X array contains missing values:\n',
         np.isnan(X).any()
     )
 
-    if return_ids: return X, y, ids_vector
-    else: return X, y
+    if as_class:
+        if return_ids: return predictionData(X=X, y=y, ids=ids_vector)
+        else: return predictionData(X=X, y=y)
+
+    else:
+        if return_ids: return X, y, ids_vector
+        else: return X, y
+
+
+def split_dataset_on_pred_proba(
+    orig_dataset, probas, og_indices, proba_thr
+):
+    """
+    Split data set after prediction has ran,
+    based on the generated predicted
+    probabilities
+
+    Input:
+        - orig_dataset: as predictedData class
+        - probas: dict with predicted probabilities per
+            sample, based on orig_dataset
+        - og_indices: dict with original sample indices
+            corresponding to probas
+        - proba_thr: threshold for acceptance of probas
+    
+    Return:
+        - data_true: data with probability exceeding
+            threshold, as predictedData class
+        - data_false: data with probability below
+            threshold, as predictedData class
+    """
+    assert len(og_indices) == len(probas), (
+        '# folds of probabilities and indices does not match'
+    )
+    for fold in og_indices.keys():
+        assert len(og_indices[fold]) == len(probas[fold]), (
+            '# probabilities and # indices does not match'
+        )
+    # create array with classification outcome
+    clf_decision = np.zeros((orig_dataset.y.shape))
+
+    # loop over single probabilities in all folds
+    for fold_n in probas:
+        for i_proba, proba in enumerate(probas[fold_n]):
+            # set correct index to True (1) if proba > acceptance threshold
+            if proba[1] > proba_thr:
+                # find corresponding index in original data
+                og_idx = og_indices[fold_n][i_proba]
+                clf_decision[og_idx] = 1
+    
+    # select data into true and false
+    sel_true = clf_decision.astype(bool)
+    data_true = predictionData(
+        X=orig_dataset.X[sel_true],
+        y=orig_dataset.y[sel_true],
+        ids=orig_dataset.ids[sel_true],
+    )
+    data_false = predictionData(
+        X=orig_dataset.X[~sel_true],
+        y=orig_dataset.y[~sel_true],
+        ids=orig_dataset.ids[~sel_true],
+    )
+
+    return data_true, data_false
