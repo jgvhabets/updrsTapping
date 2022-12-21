@@ -40,7 +40,6 @@ def find_dev_holdout_split(
     
     # loop over random seeds to test different splitting samples
     for rand_state in np.arange(300):
-        random.seed(rand_state)
         # get random split of subs per center and their scores
         subset_subs, subset_updrs = get_random_split_and_scores(
             feats=feats, subs_dict=subs_dict,

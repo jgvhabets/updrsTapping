@@ -76,9 +76,25 @@ def create_X_y_vectors(
     excl_subs: list=[],
     to_norm: bool = False,
     to_zscore: bool = False,
+    return_ids: bool=False,
 ):
     """
-    
+    create machine learning ready data set, X matrix
+    input, y vector labels. Define features to include,
+    define to in or exclude specific traces or subjects
+
+    Arguments:
+        - ftClass: class with features (FeatureSet)
+        - in / excl feats, traces, subs
+        - to_norm
+        - to_yscore
+        - return_ids: return 3rd vector with trace-IDs
+            corresponding to X and y
+
+    Returns:
+        - X: input matrix
+        - y: vector with true labels
+        - ids: vector with trace ids to identify later results
     """
     assert to_norm == False or to_zscore == False, (
         'to_norm AND to_zscore can NOT both be True'
@@ -100,12 +116,14 @@ def create_X_y_vectors(
 
     # fill outcome array y with updrs subscores
     y = [getattr(ftClass, t).tap_score for t in incl_traces]
-    # y = np.array([y]).T
     y = np.array(y)
+    # create corresponding vector with trace ids for later identifying
+    ids_vector = np.array(incl_traces)
 
     # create X matrixc with input features
     X = []
     ft_dict = {}  # fill a preversion dict of X with ft-values
+
     for ft in incl_feats: ft_dict[ft] = []
 
     for trace in incl_traces:
@@ -113,11 +131,9 @@ def create_X_y_vectors(
 
         for ft in incl_feats:
             ft_dict[ft].append(getattr(trace_fts, ft))
-            # except KeyError: print(trace, ft)
-            
+    # transform all feats x traces in array with correct shape
     for ft in incl_feats:
         X.append(ft_dict[ft])
-
     X = np.array(X).T
 
     assert X.shape[0] == y.shape[0], ('X and y have '
@@ -145,4 +161,5 @@ def create_X_y_vectors(
         np.isnan(X).any()
     )
 
-    return X, y
+    if return_ids: return X, y, ids_vector
+    else: return X, y
