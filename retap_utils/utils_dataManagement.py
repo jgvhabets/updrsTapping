@@ -39,7 +39,7 @@ def find_onedrive_path(
     """
     folder_options = [
         'onedrive', 'retapdata', 'dus', 'ber','uncut',
-        'figures',
+        'figures', 'results', 'data'
     ]
     if folder.lower() not in folder_options:
         raise ValueError(
@@ -60,7 +60,7 @@ def find_onedrive_path(
     if folder.lower() == 'onedrive': return onedrive
 
     retapdata = os.path.join(onedrive, 'ReTap', 'data')
-    if folder.lower() == 'retapdata': return retapdata
+    if folder.lower()[-4:] == 'data': return retapdata
 
     DUSdata = os.path.join(retapdata, 'dus', 'RENAMED')
     if folder.lower() == 'dus': return DUSdata
@@ -71,9 +71,8 @@ def find_onedrive_path(
     uncut = os.path.join(BERdata, 'UNCUT')
     if folder.lower() == 'uncut': return uncut
 
-    figpath = os.path.join(onedrive, 'Retap', 'figures')
-    if folder.lower() == 'figures': return figpath
-    
+    if folder.lower() == 'figures' or folder.lower() == 'results':
+        return os.path.join(onedrive, 'Retap', folder)    
 
 def get_unique_subs(path):
 
