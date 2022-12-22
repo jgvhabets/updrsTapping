@@ -19,7 +19,7 @@ from sklearn.decomposition import PCA
 
 # Import own functions
 from retap_utils import utils_dataManagement as utilsDatamng
-from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array
+from tap_extract_fts.tapping_postFeatExtr_calc import z_score_array, normalize_var_fts
 
 # TODO: ANNOTATE ANALYSIS PARAMETERS IN LOWER RIGHT CORNER
 
@@ -27,7 +27,8 @@ def get_kMeans_clusters(
     X,
     n_clusters=2,
     use_pca=True,
-    z_score=False,
+    to_zscore=False,
+    to_norm=False,
     random_state=27,
 ):
     """
@@ -41,9 +42,12 @@ def get_kMeans_clusters(
         - cluster_centroids
         - X_pca: if pca is used, otherwise None
     """
-    if z_score:
+    if to_zscore:
         for i_ft in range(X.shape[1]):
             X[:, i_ft] = z_score_array(X[:, i_ft])
+    elif to_norm:
+        for i_ft in range(X.shape[1]):
+            X[:, i_ft] = normalize_var_fts(X[:, i_ft])
 
     if use_pca:
         pca = PCA(2)
