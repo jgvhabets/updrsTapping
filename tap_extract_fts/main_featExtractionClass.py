@@ -176,6 +176,7 @@ class FeatureSet:
                         else:
                             tap_score = None
                         
+                        ### Actual extraction of features per Acc-Trace
                         setattr(
                             self,
                             f'{sub}_{state}_{side}_{rep}',
@@ -284,11 +285,13 @@ if __name__ == '__main__':
         -m is there because it is ran from a module/package 
         (within a folder)
     """
+    max_n_taps_incl = 0  # 0 leads to inclusion of all taps 
+
     data = FeatureSet(
         # subs_incl = ['BER056', ],
         centers_incl = ['BER', 'DUS'],   # 'DUS'
         verbose=False,
-        # max_n_taps_incl=10,
+        max_n_taps_incl=max_n_taps_incl,
     )
 
     deriv_path = os.path.join(
@@ -299,7 +302,10 @@ if __name__ == '__main__':
     dd = str(dt.date.today().day).zfill(2)
     mm = str(dt.date.today().month).zfill(2)
     yyyy = dt.date.today().year
-    fname = f'ftClass_ALL_{yyyy}{mm}{dd}'
+    
+    if max_n_taps_incl == 0: fname = f'ftClass_ALL_{yyyy}{mm}{dd}'
+
+    else: fname = f'ftClass_max{max_n_taps_incl}_{yyyy}{mm}{dd}'
     
 
     utils_dataMangm.save_class_pickle(

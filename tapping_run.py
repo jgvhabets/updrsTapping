@@ -73,6 +73,7 @@ def run_updrs_tap_finder(
             to_detrend=True,
             to_check_magnOrder=True,
             to_check_polarity=True,
+            to_remove_outlier=True,  # outliers replaced by nans
             verbose=True
         )
 

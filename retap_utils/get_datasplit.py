@@ -17,6 +17,8 @@ def find_dev_holdout_split(
     centers = ['BER', 'DUS'],
     splits = ['dev', 'hout'],
     to_print=False,
+    subs_excl=[],
+    traces_excl=[],
 ):
     """
     Main script to run to get balanced data splitting
@@ -30,6 +32,8 @@ def find_dev_holdout_split(
         centers=centers,
         splits=splits,
         to_print=to_print,
+        subs_excl=subs_excl,
+        traces_excl=traces_excl,
     )
     # define n samples per center for development set
     n_dev = [len(subs_dict[c]) - int(len(subs_dict[c]) * holdout_split) for c in subs_dict]
@@ -89,7 +93,9 @@ def get_population_distribution(
     holdout_split=.2,
     centers=['BER', 'DUS'],
     splits=['dev', 'hout'],
-    to_print=True
+    to_print=True,
+    subs_excl=[],
+    traces_excl=[],
 ):
     """
     
@@ -102,6 +108,9 @@ def get_population_distribution(
     total_score_distr, total_score_perc = {}, {}
 
     for trace in feats.incl_traces:
+
+        if getattr(feats, trace).sub in subs_excl: continue
+        if trace in traces_excl: continue
 
         subs.append(getattr(feats, trace).sub)
         all_updrs.append(getattr(feats, trace).tap_score)
@@ -195,7 +204,7 @@ def test_split_distr(
         if split == 'hout':
             if n_split < 73: accept_split = False
         
-        for score in range(5):
+        for score in range(4):
         
             if abs(
                 (split_scores[split][score] / n_split * 100) - 
@@ -203,5 +212,6 @@ def test_split_distr(
             ) > accept_perc_range:
 
                 accept_split = False
+        
     
     return accept_split

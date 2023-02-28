@@ -340,6 +340,60 @@ def jerkiness(
     return np.array(trace_count)  # return as array for later calculations
 
 
+def entropy_per_tap(
+    accsig, tap_indices: list,
+):
+    entr_list = []
+    svm = signalvectormagn(accsig)
+    for tap in tap_indices:
+
+        if np.logical_or(
+            np.isnan(tap[0]),
+            np.isnan(tap[-1])
+        ):
+            continue
+
+        elif len(tap) == 0:
+            continue
+        
+        else:
+            tap_svm = svm[int(tap[0]):int(tap[-1])]
+            ent = calc_entropy(tap_svm)
+            entr_list.append(ent)
+
+    return np.array(entr_list)
+
+
+from math import log, e
+
+def calc_entropy(signal, base=None):
+  """
+  Computes entropy of label distribution.
+  
+  adjusted from: https://stackoverflow.com/questions/15450192/fastest-way-to-compute-entropy-in-python
+  """
+
+  len_signal = len(signal)
+
+  if len_signal <= 1:
+    return 0
+
+  value,counts = np.unique(signal, return_counts=True)
+  probs = counts / len_signal
+  n_classes = np.count_nonzero(probs)
+
+  if n_classes <= 1:
+    return 0
+
+  ent = 0.
+
+  # Compute entropy
+  base = e if base is None else base
+  for i in probs:
+    ent -= i * log(i, base)
+
+  return ent
+
 
 ## DEFINE FEATURE FUNCTIONS FROM MAHADEVAN 2020
 
@@ -353,8 +407,8 @@ def histogram(signal_x):
 
     ncell = np.ceil(np.sqrt(len(signal_x)))
 
-    max_val = np.nanmax(signal_x.values)
-    min_val = np.nanmin(signal_x.values)
+    max_val = np.nanmax(signal_x)
+    min_val = np.nanmin(signal_x)
 
     delta = (max_val - min_val) / (len(signal_x) - 1)
 

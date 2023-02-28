@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 # Import own custom functions
 import tap_extract_fts.tapping_featureset as tap_feats
 import tap_extract_fts.tapping_postFeatExtr_calc as postExtrCalc
-from tap_load_data.tapping_preprocess import find_main_axis
+from tap_load_data.tapping_preprocess import find_main_axis, remove_acc_nans
+
 
 @dataclass(init=True, repr=True, )
 class tapFeatures:
@@ -50,18 +51,45 @@ class tapFeatures:
         if len(self.tap_lists) == 0:  # no taps detected
             return
 
+        if np.isnan(self.triax_arr).any():
+            setattr(self, 'triax_arr', remove_acc_nans(self.triax_arr))
+
+
         ax = find_main_axis(self.triax_arr, method='minmax',)
 
+        # FEATURES BASED ON FULL TRACE
+
+        # total number of taps (not depending on first 10 taps)
         self.total_nTaps = len(self.impacts)
         
+        # total tap-frequency (not depending on first 10 taps)
         self.freq = self.total_nTaps / (
             self.triax_arr.shape[1] / self.fs)
         
+        # single tap durations
         self.tap_durations = np.diff(self.impacts) / self.fs
+
+        # total RMS of trace normalised by duration in seconds
+        svm_trace = tap_feats.signalvectormagn(self.triax_arr)
+        # check and remove nans in trace svm
+        if np.isnan(svm_trace).any():
+            svm_trace = svm_trace[~np.isnan(svm_trace)]
+        rms_trace = tap_feats.calc_RMS(svm_trace)
+        norm_rms_trace = rms_trace / (max(self.triax_arr.shape) / self.fs)
+        setattr(self, 'trace_RMSn', norm_rms_trace)
+
+        # total entropy of trace (acc to Mahadevan 2020)
+        norm_svm = svm_trace / max(svm_trace)
+        rounded_norm_svm = np.around(norm_svm, 4)
+        entr_trace = tap_feats.calc_entropy(rounded_norm_svm)
+        setattr(self, 'trace_entropy', entr_trace)
+
 
         if self.max_n_taps_incl > 0:
             setattr(self, 'tap_lists', self.tap_lists[:self.max_n_taps_incl])
         
+        # FEATURES BASED ON SINGLE TAPS
+
         self.intraTapInt = tap_feats.intraTapInterval(
             self.tap_lists, self.fs
         )
@@ -113,6 +141,11 @@ class tapFeatures:
             smooth_samples=0,
         )
 
+        self.tap_entropy = tap_feats.entropy_per_tap(
+            accsig=self.triax_arr,
+            tap_indices=self.tap_lists,
+        )
+
         if type(self.updrsSubScore) == str or np.str_:
             self.updrsSubScore = float(self.updrsSubScore)
 
@@ -124,10 +157,11 @@ class tapFeatures:
             'raise_velocity',
             'intraTapInt',
             'jerkiness_taps',
+            'tap_entropy'
         ]
 
         for ft in fts_to_postExtr_calc:
-
+            
             setattr(
                 self,
                 f'mean_{ft}',
@@ -152,7 +186,7 @@ class tapFeatures:
                     method='IQR',
                 )
             )
-       
+
             setattr(
                 self,
                 f'decr_{ft}',
@@ -162,14 +196,25 @@ class tapFeatures:
                     n_taps_mean=3,
                 )
             )
-            setattr(
-                self,
-                f'slope_{ft}',
-                postExtrCalc.ft_decrement(
-                    ft_array=getattr(self, ft),
-                    method='regr_slope',
+            if ft == 'tap_entropy':
+                # give absolute slope values for entropy
+                setattr(
+                    self,
+                    f'slope_{ft}',
+                    abs(postExtrCalc.ft_decrement(
+                        ft_array=getattr(self, ft),
+                        method='regr_slope',
+                    ))
                 )
-            )
+            else:
+                setattr(
+                    self,
+                    f'slope_{ft}',
+                    postExtrCalc.ft_decrement(
+                        ft_array=getattr(self, ft),
+                        method='regr_slope',
+                    )
+                )
 
         # clear up space
         self.triax_arr = 'cleaned up'

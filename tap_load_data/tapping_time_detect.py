@@ -8,6 +8,7 @@ from scipy.signal import find_peaks
 # Import own functions
 from tap_load_data.tapping_impact_finder import find_impacts
 from tap_extract_fts.tapping_featureset import signalvectormagn
+from tap_load_data.tapping_preprocess import remove_acc_nans
    
 
 def updrsTapDetector(
@@ -40,15 +41,12 @@ def updrsTapDetector(
         - endPeaks (array): indices of impact-peak which correspond
             to end of finger closing moment.
     """
-    # select and remove timepoints with nans
-    nans_removed = False
-
-    if np.isnan(acc_triax).any().any():
+    if np.isnan(acc_triax).any():
+        acc_triax = remove_acc_nans(acc_triax)
         # get timepoints with any nans in all 3 axes
         sel = ~np.isnan(acc_triax).any(axis=0)
         # if len(sel) == 3: sel = len(np.isnan(acc_triax).any(axis=1))  # for debugging if acc_triax has other shape
         acc_triax = acc_triax[:, sel]
-        nans_removed = True
     
     sig = acc_triax[main_ax_i]
     sigdf = np.diff(sig)
@@ -176,8 +174,4 @@ def updrsTapDetector(
     
     tapi = tapi[1:]  # drop first tap due to starting time
 
-    if nans_removed:
-        return tapi, impacts, acc_triax
-    
-    else:
-        return tapi, impacts
+    return tapi, impacts, acc_triax

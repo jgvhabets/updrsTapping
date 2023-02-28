@@ -20,6 +20,8 @@ def select_traces_and_feats(
     excl_traces: list=[],
     excl_subs: list=[],
 ):
+    assert type(excl_subs) == list, 'excl_subs has to list'
+    
     assert center.upper() in ['ALL', 'BER', 'DUS'], (
         'defined center must be "all", "ber", or "dus"'
     )
@@ -79,14 +81,15 @@ def create_X_y_vectors(
     ftClass,
     incl_feats,
     incl_traces,
-    excl_traces: list = [],
-    excl_subs: list=[],
+    excl_traces = [],
+    excl_subs = [],
     to_norm: bool = False,
     to_zscore: bool = False,
     to_mask_4: bool=False,
     to_mask_0: bool=False,
     return_ids: bool=False,
     as_class: bool=False,
+    mask_nans=True
 ):
     """
     create machine learning ready data set, X matrix
@@ -100,6 +103,7 @@ def create_X_y_vectors(
         - to_yscore
         - return_ids: return 3rd vector with trace-IDs
             corresponding to X and y
+        - mask_nans: mask all NaNs with 0
 
     Returns:
         - X: input matrix
@@ -162,19 +166,21 @@ def create_X_y_vectors(
 
     # deal with missings
     # for now set all to zero, ideally: avoid zeros in extraction
-    nan_mask = np.isnan(X)
-    print(f'# of NaNs per feat: {sum(nan_mask)}')
-    X[nan_mask] = 0
+    if mask_nans:
+        nan_mask = np.isnan(X)
+        print(f'# of NaNs per feat: {sum(nan_mask)}')
+        X[nan_mask] = 0
+        # check whether masking worked
+        assert np.isnan(X).any() == False, print(
+            'X array contains missing values:\n',
+            np.isnan(X).any()
+        )
 
     if to_mask_4:
         # Mask UPDRS 4 -> 3 merge (too low number)
         mask = y == 4
         y[mask] = 3
 
-    assert np.isnan(X).any() == False, print(
-        'X array contains missing values:\n',
-        np.isnan(X).any()
-    )
 
     if as_class:
         if return_ids: return predictionData(X=X, y=y, ids=ids_vector)

@@ -35,7 +35,7 @@ def run_preproc_acc(
         dat_arr, main_ax_index, fs, verbose=False)
 
     if to_remove_outlier: dat_arr = remove_outlier(
-        dat_arr, main_ax_index, fs, verbose)
+        dat_arr, main_ax_index, fs, verbose)  # replaces outliers with nans
     
     # print('end preprocess')
 
@@ -191,3 +191,19 @@ def check_polarity(
     return dat_arr
 
 
+def remove_acc_nans(acc_arr):
+    """"
+    remove NaNs from 1- or 3-axial ACC array
+    """
+    acc_arr = np.atleast_2d(acc_arr)
+
+    if min(acc_arr.shape) > 1:  # triaxial
+        # get timepoints with any nans in all 3 axes
+        sel = ~np.isnan(acc_arr).any(axis=0)
+        acc_arr = acc_arr[:, sel]
+
+    else:
+        sel = ~np.isnan(acc_arr)
+        acc_arr = acc_arr[:, sel]
+    
+    return acc_arr
