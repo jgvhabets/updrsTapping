@@ -161,7 +161,7 @@ class tapFeatures:
         ]
 
         for ft in fts_to_postExtr_calc:
-            
+            # get mean
             setattr(
                 self,
                 f'mean_{ft}',
@@ -170,6 +170,7 @@ class tapFeatures:
                     method='mean',
                 )
             )
+            # get coef of variation
             setattr(
                 self,
                 f'coefVar_{ft}',
@@ -178,6 +179,7 @@ class tapFeatures:
                     method='coefVar',
                 )
             )
+            # get interquartile range
             setattr(
                 self,
                 f'IQR_{ft}',
@@ -186,7 +188,7 @@ class tapFeatures:
                     method='IQR',
                 )
             )
-
+            # get decrement over start-mean and end-mean
             setattr(
                 self,
                 f'decr_{ft}',
@@ -196,7 +198,8 @@ class tapFeatures:
                     n_taps_mean=3,
                 )
             )
-            if ft == 'tap_entropy':
+            # get slope (absolute slope for entropy and intraTap)
+            if ft == 'tap_entropy' or ft == 'intraTapInt':
                 # give absolute slope values for entropy
                 setattr(
                     self,

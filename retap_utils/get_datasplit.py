@@ -14,6 +14,7 @@ def find_dev_holdout_split(
     feats,
     holdout_split = .2,
     accept_perc_range = 3,
+    choose_random_split=None,
     centers = ['BER', 'DUS'],
     splits = ['dev', 'hout'],
     to_print=False,
@@ -23,6 +24,10 @@ def find_dev_holdout_split(
     """
     Main script to run to get balanced data splitting
     of development and hold out data sets
+
+    Input:
+        - choose_random_split: predefine which datasplit
+            is used to reproduce data split and results
     """
     print('SPLITTING DATA IN DEV AND HOLD-OUT')
     # get unique subs per center, get score-distribution in full data set
@@ -44,6 +49,10 @@ def find_dev_holdout_split(
     
     # loop over random seeds to test different splitting samples
     for rand_state in np.arange(300):
+        # if exact random_split is defined, skip all others
+        if choose_random_split:
+            if rand_state != choose_random_split: continue
+
         # get random split of subs per center and their scores
         subset_subs, subset_updrs = get_random_split_and_scores(
             feats=feats, subs_dict=subs_dict,
@@ -215,3 +224,4 @@ def test_split_distr(
         
     
     return accept_split
+
