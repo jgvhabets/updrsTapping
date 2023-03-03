@@ -158,12 +158,25 @@ def normalize_var_fts(values):
     return ft_out
 
 
-def z_score_array(array):
+def z_score_array(
+    array, save_params=False, use_mean=None, use_sd=None,
+):
+    """
+    if save_params is True: returns z_array, STD_mean, STD_sd
+    """
 
     if isinstance(array, list): array = np.array(array)
 
-    z_array = (array - np.nanmean(array)) / np.nanstd(array)
+    # if given, use predefined parameters
+    if use_mean: STD_mean = use_mean
+    else: STD_mean = np.nanmean(array)
+    if use_sd: STD_sd = use_sd
+    else: STD_sd = np.nanstd(array)
 
+    z_array = (array - STD_mean) / STD_sd
+
+    if save_params: return z_array, STD_mean, STD_sd
+    
     return z_array
 
 

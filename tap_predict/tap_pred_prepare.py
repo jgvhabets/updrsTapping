@@ -89,7 +89,9 @@ def create_X_y_vectors(
     to_mask_0: bool=False,
     return_ids: bool=False,
     as_class: bool=False,
-    mask_nans=True
+    mask_nans=True,
+    save_STD_params=False,
+    use_STD_params_df=None,
 ):
     """
     create machine learning ready data set, X matrix
@@ -154,6 +156,8 @@ def create_X_y_vectors(
         'different 1st-dimension')
 
     # Normalise vector per array-feature over all samples
+    if save_STD_params: params_list = []
+
     if to_norm:
         for ft_i in range(X.shape[1]):
             vec_max = np.nanmax(X[:, ft_i])
@@ -161,7 +165,19 @@ def create_X_y_vectors(
     # Standardise vector per array-feature over all samples
     elif to_zscore:
         for ft_i in range(X.shape[1]):
-            X[:, ft_i] = z_score_array(X[:, ft_i])
+            if save_STD_params:
+                X[:, ft_i], std_mean, std_sd = z_score_array(X[:, ft_i], save_params=True)
+                params_list.append([std_mean, std_sd])
+            else:
+                # use inserted params dataframe (for HOLD-OUT VALIDATION)
+                if use_STD_params_df:
+                    X[:, ft_i] = z_score_array(
+                        X[:, ft_i],
+                        use_mean=use_STD_params_df.values[ft_i, 0],
+                        use_sd=use_STD_params_df.values[ft_i, 1]
+                    )
+                else:   
+                    X[:, ft_i] = z_score_array(X[:, ft_i])
     
 
     # deal with missings
@@ -183,8 +199,16 @@ def create_X_y_vectors(
 
 
     if as_class:
-        if return_ids: return predictionData(X=X, y=y, ids=ids_vector)
-        else: return predictionData(X=X, y=y)
+        if return_ids:
+            if save_STD_params:
+                return predictionData(X=X, y=y, ids=ids_vector), params_list
+            else:
+                return predictionData(X=X, y=y, ids=ids_vector)
+        else:
+            if save_STD_params:
+                return predictionData(X=X, y=y,), params_list
+            else:
+                return predictionData(X=X, y=y,)
 
     else:
         if return_ids: return X, y, ids_vector

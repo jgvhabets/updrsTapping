@@ -71,7 +71,7 @@ def get_cvFold_predictions_dicts(
             )
         elif clf.lower() == 'rf' or clf.lower() == 'randomforest':
             clf = RandomForestClassifier(
-                n_estimators=500,  # 500
+                n_estimators=1000,  # 500
                 max_depth=None,
                 min_samples_split=5,
                 max_features='sqrt',

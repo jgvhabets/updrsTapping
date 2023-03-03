@@ -13,7 +13,7 @@ import tap_predict.tap_pred_prepare as pred_prep
 
 
 def classify_based_on_nTaps(
-    max_n_taps, ftClass, score_to_set=3, in_cv=False,
+    max_n_taps, ftClass, score_to_set=3,
 ):
     """
     Classify traces based on a too small number of
@@ -37,35 +37,31 @@ def classify_based_on_nTaps(
                   for t in ftClass.incl_traces]
     
     selected_traces = []
-    if in_cv: true_scores = []
+    true_scores = []
 
     for t in list(compress(ftClass.incl_traces, cutoff_sel)):
 
         selected_traces.append(t)
-        if in_cv: true_scores.append(getattr(ftClass, t).tap_score)
+        true_scores.append(getattr(ftClass, t).tap_score)
 
     # masking of true 4 to 3
-    if in_cv:
-        true_scores = np.array(true_scores)
-        sel = true_scores == 4
-        true_scores[sel] = 3
+    true_scores = np.array(true_scores)
+    sel = true_scores == 4
+    true_scores[sel] = 3
 
     pred_scores = [score_to_set] * len(selected_traces)
 
-    print(
-        f'CLASSIFIED as {score_to_set} based on < {max_n_taps} TAPS:\n\t'
-        f'{selected_traces}\n\t'
-    )
-    if in_cv:
-        print(f'true scores: {true_scores}')
-        return selected_traces, pred_scores, true_scores
+    # print(
+    #     f'CLASSIFIED as {score_to_set} based on < {max_n_taps} TAPS:\n\t'
+    #     f'{selected_traces}\n\t'
+    # )
+    # print(f'true scores: {true_scores}')
+
+    return selected_traces, pred_scores, true_scores
     
-    else:
-        return selected_traces, pred_scores
 
 
-
-def define_fast_cluster(y_clust, cluster_fts, cluster_data):
+def define_fast_cluster(y_clust, cluster_fts, cluster_X):
     """
     Returns index of faster cluster
     """
@@ -75,7 +71,7 @@ def define_fast_cluster(y_clust, cluster_fts, cluster_data):
     for i_cls in np.unique(y_clust):
 
         i_ft = np.where([f == ft for f in cluster_fts])[0][0]
-        mean_iti_cluster = np.mean(cluster_data.X[y_clust == i_cls, i_ft])
+        mean_iti_cluster = np.mean(cluster_X[y_clust == i_cls, i_ft])
         cluster_mean_ITIs.append(mean_iti_cluster)
 
         print(f'\tcluster {i_cls}: {mean_iti_cluster}')
@@ -86,11 +82,11 @@ def define_fast_cluster(y_clust, cluster_fts, cluster_data):
 
 
 def split_data_in_clusters(
-    pred_data, y_clusters, cluster_data, cluster_fts
+    pred_data, y_clusters, cluster_X, cluster_fts
 ):
     # Define which cluster contains faster tappers
     fast_cluster_i = define_fast_cluster(
-        y_clusters, cluster_fts, cluster_data
+        y_clusters, cluster_fts, cluster_X
     )
     # split in clusters
     if fast_cluster_i == 0: slow_cluster_i = 1
