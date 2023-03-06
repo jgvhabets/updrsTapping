@@ -122,6 +122,12 @@ CLUSTER_FEATS = [
     'freq'
 ]
 
+dd = str(dt.date.today().day).zfill(2)
+mm = str(dt.date.today().month).zfill(2)
+yyyy = dt.date.today().year
+today = f'{yyyy}{mm}{dd}'
+FIG_FNAME += f'_{today}'
+
 
 #########################
 # DATA PREPARATION PART #
@@ -290,16 +296,17 @@ if DATASPLIT == 'CROSSVAL':
                 y_true_dict[f'{c_name}_{i_d}'] = y_true_c[i_d]
                 y_pred_dict[f'{c_name}_{i_d}'] = y_pred_c[i_d]
 
+
 if DATASPLIT == 'HOLDOUT':
     
     if not CLUSTER_ON_FREQ:
-        y_true_dict, y_pred_dict = perform_holdout(
+        y_pred_dict, y_true_dict = perform_holdout(
             full_X=pred_data.X, full_y=pred_data.y,
             full_modelname=MODEL_NAME
         )
     
     elif CLUSTER_ON_FREQ:
-        y_true_dict, y_pred_dict = perform_holdout(
+        y_pred_dict, y_true_dict = perform_holdout(
             slow_X=slow_pred_data.X, slow_y=slow_pred_data.y,
             fast_X=fast_pred_data.X, fast_y=fast_pred_data.y,
             slow_modelname=MODEL_NAME_SLOW,
@@ -317,12 +324,9 @@ if SCORE_FEW_TAPS_3:
 ###################################
 
 if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
-    dd = str(dt.date.today().day).zfill(2)
-    mm = str(dt.date.today().month).zfill(2)
-    yyyy = dt.date.today().year
     
     # save std parameters for classification
-    fname = f'{yyyy}{mm}{dd}_STD_params'
+    fname = f'{today}_STD_params'
     if MAX_TAPS_PER_TRACE: fname += f'_{MAX_TAPS_PER_TRACE}taps'
     else: fname += '_alltaps'
     STD_params.to_csv(
@@ -332,7 +336,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
     )
     # save std parameters for clustering
     if CLUSTER_ON_FREQ:
-        fname = f'{yyyy}{mm}{dd}_STD_params_cluster'
+        fname = f'{today}_STD_params_cluster'
         if MAX_TAPS_PER_TRACE: fname += f'_{MAX_TAPS_PER_TRACE}taps'
         else: fname += '_alltaps'
         STD_params_cluster.to_csv(
@@ -343,7 +347,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 
     # save model trained on FULL crossvalidation data
     if not CLUSTER_ON_FREQ:
-        model_fname = f'{yyyy}{mm}{dd}_{CLF_CHOICE}_UNCLUSTERED'
+        model_fname = f'{today}_{CLF_CHOICE}_UNCLUSTERED'
         if MAX_TAPS_PER_TRACE: model_fname += f'_{MAX_TAPS_PER_TRACE}taps'
         else: model_fname += f'_alltaps'
 
@@ -358,7 +362,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
             ['fast', 'slow'], [fast_pred_data, slow_pred_data]
         ):
             
-            model_fname = f'{yyyy}{mm}{dd}_{CLF_CHOICE}_CLUSTERED_{c_name.upper()}'
+            model_fname = f'{today}_{CLF_CHOICE}_CLUSTERED_{c_name.upper()}'
             if MAX_TAPS_PER_TRACE: model_fname += f'_{MAX_TAPS_PER_TRACE}taps'
             else: model_fname += f'_alltaps'
         
@@ -375,31 +379,40 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 if TO_MASK_4: mc_labels = ['0', '1', '2', '3-4']
 else: mc_labels = ['0', '1', '2', '3', '4']
 
+# save slow and fast clusters seperately
+for key in y_pred_dict:
+    if key not in ['slow', 'fast']: continue
+    k_score = kappa(y_true_dict[key], y_pred_dict[key], weights='linear')
+    R, R_p = spearmanr(y_true_dict[key], y_pred_dict[key])
+    cmtemp = cv_models.multiclass_conf_matrix(
+        y_true=y_true_dict[key], y_pred=y_pred_dict[key],
+        labels=mc_labels,
+    )
+    print(key, cmtemp)
+    plot_results.plot_confMatrix_scatter(
+        y_true_dict[key], y_pred_dict[key],
+        R=R, K=k_score, CM=cmtemp,
+        to_save=TO_SAVE_FIG, fname=f'{FIG_FNAME}_{key.upper()}',
+    )
+
 # create multiclass confusion matrix
 cm = cv_models.multiclass_conf_matrix(
     y_true=y_true_dict, y_pred=y_pred_dict,
     labels=mc_labels,
 )
 
-# create metrics
-y_true_temp, y_pred_temp = [], []
+# create metrics for whole data split
+y_true_all, y_pred_all = [], []
 
 for key in y_true_dict.keys():
-    y_true_temp.extend(y_true_dict[key])
-    y_pred_temp.extend(y_pred_dict[key])
+    y_true_all.extend(y_true_dict[key])
+    y_pred_all.extend(y_pred_dict[key])
 
-k_score = kappa(y_true_temp, y_pred_temp, weights='linear')
-R, R_p = spearmanr(y_true_temp, y_pred_temp)
-
-if TO_SAVE_FIG:
-    dd = str(dt.date.today().day).zfill(2)
-    mm = str(dt.date.today().month).zfill(2)
-    yyyy = dt.date.today().year
-    FIG_FNAME += f'_{yyyy}{mm}{dd}'
-
+k_score = kappa(y_true_all, y_pred_all, weights='linear')
+R, R_p = spearmanr(y_true_all, y_pred_all)
 
 plot_results.plot_confMatrix_scatter(
-    y_true_temp, y_pred_temp,
+    y_true=y_true_all, y_pred=y_pred_all,
     R=R, K=k_score, CM=cm,
     to_save=TO_SAVE_FIG, fname=FIG_FNAME,
 )

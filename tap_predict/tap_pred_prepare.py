@@ -170,7 +170,7 @@ def create_X_y_vectors(
                 params_list.append([std_mean, std_sd])
             else:
                 # use inserted params dataframe (for HOLD-OUT VALIDATION)
-                if use_STD_params_df:
+                if isinstance(use_STD_params_df, pd.DataFrame):
                     X[:, ft_i] = z_score_array(
                         X[:, ft_i],
                         use_mean=use_STD_params_df.values[ft_i, 0],
@@ -183,6 +183,7 @@ def create_X_y_vectors(
     # deal with missings
     # for now set all to zero, ideally: avoid zeros in extraction
     if mask_nans:
+        print(X.shape)
         nan_mask = np.isnan(X)
         print(f'# of NaNs per feat: {sum(nan_mask)}')
         X[nan_mask] = 0

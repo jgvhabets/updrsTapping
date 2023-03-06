@@ -143,11 +143,11 @@ def multiclass_conf_matrix(
         y_true = y_true_all
         y_pred = y_pred_all
 
-    num_labels = np.unique(y_true)
+    # num_labels = np.unique(y_true)
+    num_labels = [0, 1, 2, 3]
 
     # if no labels given, use numerical labels
-    if len(labels) == 0:
-        labels = num_labels.astype(str)
+    if len(labels) == 0: labels = num_labels.astype(str)
     # transform numerical predictions into labels
     reversefactor = dict(zip(num_labels, labels))
     y_pred = np.vectorize(reversefactor.get)(y_pred)

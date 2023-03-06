@@ -13,7 +13,7 @@ from retap_utils.utils_dataManagement import find_onedrive_path
 
 
 def plot_confMatrix_scatter(
-    y_true_temp, y_pred_temp,
+    y_true, y_pred,
     R=None, K=None, CM=None,
     mc_labels=['0', '1', '2', '3-4'],
     to_save=False, fname=None,
@@ -25,10 +25,10 @@ def plot_confMatrix_scatter(
                             gridspec_kw={'width_ratios': [2, 1]},)
     fs=14
 
-    jitt = np.random.uniform(low=-.2, high=0.2, size=len(y_true_temp))
-    jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(y_true_temp))
+    jitt = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
+    jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
 
-    axes[0].scatter(y_true_temp+jitt, y_pred_temp+jitt2,
+    axes[0].scatter(y_true+jitt, y_pred+jitt2,
                     alpha=.5,)
     axes[0].set_xlabel('True Tap Score', weight='bold', fontsize=fs)
     axes[0].set_ylabel('Predicted Tap Score', weight='bold', fontsize=fs)
@@ -40,6 +40,13 @@ def plot_confMatrix_scatter(
 
 
     ### MAKE HEATMAP of conf matrix
+
+    # add missing data in CM table
+    for l in mc_labels:
+        if l not in CM.index:
+            CM.loc[l] = [0] * len(mc_labels)
+    CM = CM.sort_index()
+
     im = axes[1].imshow(CM.values)
 
     # Show all ticks and label them with the respective list entries
@@ -49,8 +56,8 @@ def plot_confMatrix_scatter(
     axes[1].set_xticklabels(mc_labels, weight='bold', fontsize=fs)
     axes[1].set_yticklabels(mc_labels, weight='bold', fontsize=fs, )
     axes[1].xaxis.set_label_position('top')
-    axes[1].set_xlabel('True UPDRS Tap Score', weight='bold', fontsize=fs, )
-    axes[1].set_ylabel('Predicted UPDRS Tap Score', weight='bold', fontsize=fs)
+    axes[1].set_xlabel('Predicted UPDRS Tap Score', weight='bold', fontsize=fs, )
+    axes[1].set_ylabel('True UPDRS Tap Score', weight='bold', fontsize=fs)
 
     # Loop over data dimensions and create text annotations.
     for i in range(len(mc_labels)):

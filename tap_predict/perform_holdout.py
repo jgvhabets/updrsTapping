@@ -34,7 +34,7 @@ def perform_holdout(
     """
     # check if either full (unclustered) or clustered data and models are present
     if isinstance(full_X, np.ndarray):
-        assert isinstance(full_modelname, str), ('UNCLUISTERED data and model not present')
+        assert isinstance(full_modelname, str), ('UNCLUSTERED data and model not present')
         split = 'UNCLUSTERED'
     elif isinstance(slow_X, np.ndarray) and isinstance(fast_X, np.ndarray):
         assert np.logical_and(
@@ -61,9 +61,12 @@ def perform_holdout(
         y_pred_dict['slow'] = slow_clf.predict(slow_X)
         y_pred_dict['fast'] = fast_clf.predict(fast_X)
         # add true labels to dict
+        print('fast y true', fast_y)
         y_true_dict['slow'] = slow_y
         y_true_dict['fast'] = fast_y
-    
+        print('true', y_true_dict)
+        print('pred', y_pred_dict)
+
     return y_pred_dict, y_true_dict
 
 
