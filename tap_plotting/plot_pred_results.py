@@ -42,9 +42,11 @@ def plot_confMatrix_scatter(
     ### MAKE HEATMAP of conf matrix
 
     # add missing data in CM table
-    for l in mc_labels:
+    for i_label, l in enumerate(mc_labels):
         if l not in CM.index:
-            CM.loc[l] = [0] * len(mc_labels)
+            CM.loc[l] = [0] * CM.shape[1]
+        if l not in CM.keys():
+            CM.insert(loc=i_label, value=[0] * CM.shape[0], column=l)
     CM = CM.sort_index()
 
     im = axes[1].imshow(CM.values)

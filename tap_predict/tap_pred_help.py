@@ -103,3 +103,74 @@ def split_data_in_clusters(
         ids=pred_data.ids[y_clusters == slow_cluster_i])
 
     return cv_fast_data, cv_slow_data
+
+
+def get_model_param_fig_names(
+    CLF_CHOICE, USE_MODEL_DATE, CLUSTER_ON_FREQ,
+    MAX_TAPS_PER_TRACE, DATASPLIT, RECLASS_AFTER_RF,
+    testDev: bool = False,
+):
+    """
+    Create names of Models, pickled feature files,
+    model parameters, figures in workflow of
+    prediction script retap_main_prediction_script.py 
+    
+    Input:
+        - all variables coming from main_predict script
+            all have to be given
+    
+    Returns:
+        - naming_dict: containing all created name-strings
+    """
+    # dict to save all names in, use dict bcs of variable content
+    # depending on input variables
+    naming_dict = {}
+
+    if CLUSTER_ON_FREQ:
+        naming_dict['FIG_FNAME'] = f'Clustered_{CLF_CHOICE}'
+        naming_dict['MODEL_NAME_FAST'] = f'{USE_MODEL_DATE}_{CLF_CHOICE}_CLUSTERED_FAST'
+        naming_dict['MODEL_NAME_SLOW'] = f'{USE_MODEL_DATE}_{CLF_CHOICE}_CLUSTERED_SLOW'
+        naming_dict['STD_PARAMS'] = f'{USE_MODEL_DATE}_STD_params'
+        naming_dict['CLUSTER_STD_PARAMS'] = f'{USE_MODEL_DATE}_STD_params_cluster'
+
+        if MAX_TAPS_PER_TRACE:
+            naming_dict['FIG_FNAME'] += f'_{MAX_TAPS_PER_TRACE}taps'
+            naming_dict['MODEL_NAME_FAST'] += f'_{MAX_TAPS_PER_TRACE}taps.P'
+            naming_dict['MODEL_NAME_SLOW'] += f'_{MAX_TAPS_PER_TRACE}taps.P'
+            naming_dict['STD_PARAMS'] += f'_{MAX_TAPS_PER_TRACE}taps.csv'
+            naming_dict['CLUSTER_STD_PARAMS'] += f'_{MAX_TAPS_PER_TRACE}taps.csv'
+        else:
+            naming_dict['FIG_FNAME'] += f'_alltaps'
+            naming_dict['MODEL_NAME_FAST'] += f'_alltaps.P'
+            naming_dict['MODEL_NAME_SLOW'] += f'_alltaps.P'
+            naming_dict['STD_PARAMS'] += f'_alltaps.csv'
+            naming_dict['CLUSTER_STD_PARAMS'] += f'_alltaps.csv'
+
+    elif not CLUSTER_ON_FREQ:
+        naming_dict['FIG_FNAME'] = f'Unclustered_{CLF_CHOICE}'
+        naming_dict['MODEL_NAME'] = f'{USE_MODEL_DATE}_{CLF_CHOICE}_UNCLUSTERED'
+        naming_dict['STD_PARAMS'] = f'{USE_MODEL_DATE}_STD_params'
+
+        if isinstance(RECLASS_AFTER_RF, str):
+            if RECLASS_AFTER_RF.upper() in ['RF', 'LOGREG', 'SVC']:
+                naming_dict['FIG_FNAME'] += f'_reclass{RECLASS_AFTER_RF.upper()}'
+                # naming_dict['MODEL_NAME'] += f'_reclass{RECLASS_AFTER_RF.upper()}'
+            else:
+                raise ValueError('incorrect model code for Reclassifying')
+            
+        if MAX_TAPS_PER_TRACE:
+            naming_dict['FIG_FNAME'] += f'_{MAX_TAPS_PER_TRACE}taps'
+            naming_dict['MODEL_NAME'] += f'_{MAX_TAPS_PER_TRACE}taps.P'
+            naming_dict['STD_PARAMS'] += f'_{MAX_TAPS_PER_TRACE}taps.csv'
+        else:
+            naming_dict['FIG_FNAME'] += f'_alltaps'
+            naming_dict['MODEL_NAME'] += f'_alltaps.P'
+            naming_dict['STD_PARAMS'] += f'_alltaps.csv'
+
+    if DATASPLIT == 'HOLDOUT':
+        naming_dict['FIG_FNAME'] = 'HOLDOUT_' + naming_dict["FIG_FNAME"]
+
+    if testDev:
+        naming_dict['FIG_FNAME'] = 'test_' + naming_dict["FIG_FNAME"]
+
+    return naming_dict

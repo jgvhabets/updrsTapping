@@ -24,10 +24,14 @@ def save_model_in_cv(
     if not path: path = join(get_local_proj_dir(), 'results', 'models')
     # create path if not existing
     if not exists(path): makedirs(path)
-    # check p0ickle extension
+    # check pickle extension
     if not model_fname.endswith('P') or model_fname.endswith('pkl'):
         model_fname += '.P'
 
+    # set random state    
+    np.random.seed(random_state)
+
+    # retrain model on ALL cross-validation data
     if clf == 'RF':
         clf = RandomForestClassifier(
             n_estimators=1000,  # 500
@@ -38,8 +42,8 @@ def save_model_in_cv(
             class_weight='balanced',
         )
     
-    # set random state    
-    np.random.seed(random_state)
+    elif clf == 'LogReg':
+        clf = LogisticRegression(random_state=random_state, solver='lbfgs',)
 
     # fit model
     clf.fit(X=X_CV, y=y_CV)

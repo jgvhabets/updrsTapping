@@ -34,21 +34,28 @@ import tap_plotting.plot_pred_results as plot_results
 
 
 ### SET VARIABLES (load later from json) ###
+# define features to use
 FT_CLASS_DATE = '20230228'
+MAX_TAPS_PER_TRACE = 15  # should be None, 10, 15
+# define modeling
 DATASPLIT = 'HOLDOUT'  # should be CROSSVAL or HOLDOUT
-CLUSTER_ON_FREQ = True
-N_CLUSTERS_FREQ = 2
-MAX_TAPS_PER_TRACE = None  # should be None, 10, 15
 CLF_CHOICE = 'RF'
-SAVE_TRAINED_MODEL = True
+CLUSTER_ON_FREQ = False
+N_CLUSTERS_FREQ = 2
+RECLASS_AFTER_RF = 'LOGREG'  # RF, LOGREG, SVC or None
 N_RANDOM_SPLIT = 41  # 01.03.23, default None if split has to be found
+# if holdout, choose model
+# USE_MODEL_DATE = '20230303' # DGKN version
+USE_MODEL_DATE = '20230316' # changed clustering feats and reclassifying
+
+# define saving or plotting
+SAVE_TRAINED_MODEL = True
 TO_PLOT = True
 TO_SAVE_FIG = True
 
+# std settings and exclusions
 SUBS_EXCL = ['BER028']  # too many missing acc-data
 TRACES_EXCL = ['DUS006_M0S0_L_1']  # no score/video
-
-USE_MODEL_DATE = '20230303' 
 
 SCORE_FEW_TAPS_3 = True
 CUTOFF_TAPS_3 = 9
@@ -59,45 +66,13 @@ TO_MASK_4 = True
 
 
 # build names for models, params and figures to use
-if CLUSTER_ON_FREQ:
-    FIG_FNAME = f'Clustered_{CLF_CHOICE}'
-    MODEL_NAME_FAST = f'{USE_MODEL_DATE}_{CLF_CHOICE}_CLUSTERED_FAST'
-    MODEL_NAME_SLOW = f'{USE_MODEL_DATE}_{CLF_CHOICE}_CLUSTERED_SLOW'
-    STD_PARAMS = f'{USE_MODEL_DATE}_STD_params'
-    CLUSTER_STD_PARAMS = f'{USE_MODEL_DATE}_STD_params_cluster'
-
-    if MAX_TAPS_PER_TRACE:
-        FIG_FNAME += f'_{MAX_TAPS_PER_TRACE}taps'
-        MODEL_NAME_FAST = f'{MODEL_NAME_FAST}_{MAX_TAPS_PER_TRACE}taps.P'
-        MODEL_NAME_SLOW = f'{MODEL_NAME_SLOW}_{MAX_TAPS_PER_TRACE}taps.P'
-        STD_PARAMS = f'{STD_PARAMS}_{MAX_TAPS_PER_TRACE}taps.csv'
-        CLUSTER_STD_PARAMS = f'{CLUSTER_STD_PARAMS}_{MAX_TAPS_PER_TRACE}taps.csv'
-    else:
-        FIG_FNAME += f'_alltaps'
-        MODEL_NAME_FAST = f'{MODEL_NAME_FAST}_alltaps.P'
-        MODEL_NAME_SLOW = f'{MODEL_NAME_SLOW}_alltaps.P'
-        STD_PARAMS = f'{STD_PARAMS}_alltaps.csv'
-        CLUSTER_STD_PARAMS = f'{CLUSTER_STD_PARAMS}_alltaps.csv'
-
-if not CLUSTER_ON_FREQ:
-    FIG_FNAME = f'Unclustered_{CLF_CHOICE}'
-    MODEL_NAME = f'{USE_MODEL_DATE}_{CLF_CHOICE}_UNCLUSTERED'
-    STD_PARAMS = f'{USE_MODEL_DATE}_STD_params'
-
-    if MAX_TAPS_PER_TRACE:
-        FIG_FNAME += f'_{MAX_TAPS_PER_TRACE}taps'
-        MODEL_NAME = f'{MODEL_NAME}_{MAX_TAPS_PER_TRACE}taps.P'
-        STD_PARAMS = f'{STD_PARAMS}_{MAX_TAPS_PER_TRACE}taps.csv'
-    else:
-        FIG_FNAME += f'_alltaps'
-        MODEL_NAME = f'{MODEL_NAME}_alltaps.P'
-        STD_PARAMS = f'{STD_PARAMS}_alltaps.csv'
-
-if DATASPLIT == 'HOLDOUT': FIG_FNAME = f'HOLDOUT_{FIG_FNAME}'
-
-testDev = False
-if testDev: FIG_FNAME = f'test_{FIG_FNAME}'
-
+naming_dict = pred_help.get_model_param_fig_names(
+    CLF_CHOICE=CLF_CHOICE, USE_MODEL_DATE=USE_MODEL_DATE,
+    CLUSTER_ON_FREQ=CLUSTER_ON_FREQ, DATASPLIT=DATASPLIT,
+    RECLASS_AFTER_RF=RECLASS_AFTER_RF,
+    MAX_TAPS_PER_TRACE=MAX_TAPS_PER_TRACE,
+    testDev=False,
+)
 
 CLASS_FEATS = [
     'trace_RMSn',
@@ -118,15 +93,27 @@ CLASS_FEATS = [
 
 CLUSTER_FEATS = [
     'mean_intraTapInt',
-    'coefVar_intraTapInt',
-    'freq'
+    # 'coefVar_intraTapInt',
+    # 'freq',
+    'mean_tapRMS',
+    'trace_RMSn',
 ]
+
+RECLASS_FEATS = [
+    'coefVar_tapRMS',
+    'coefVar_impactRMS',
+    'coefVar_intraTapInt',
+    'mean_raise_velocity',
+    'slope_impactRMS',
+    'coefVar_tap_entropy',
+]
+
 
 dd = str(dt.date.today().day).zfill(2)
 mm = str(dt.date.today().month).zfill(2)
 yyyy = dt.date.today().year
 today = f'{yyyy}{mm}{dd}'
-FIG_FNAME += f'_{today}'
+naming_dict['FIG_FNAME'] += f'_{today}'
 
 
 #########################
@@ -163,11 +150,12 @@ elif DATASPLIT == 'HOLDOUT':
     datasplit_subs_incl = datasplit_subs['hout']
     datasplit_subs_excl = datasplit_subs['dev']
     params_df = read_csv(join(utils_dataManagement.get_local_proj_dir(),
-                              'results', 'models', STD_PARAMS),
+                              'results', 'models', naming_dict["STD_PARAMS"]),
                          header=0, index_col=0,)
     if CLUSTER_ON_FREQ:
         cluster_params_df = read_csv(join(utils_dataManagement.get_local_proj_dir(),
-                                        'results', 'models', CLUSTER_STD_PARAMS),
+                                        'results', 'models',
+                                        naming_dict["CLUSTER_STD_PARAMS"]),
                                     header=0, index_col=0,)
 else:
     raise ValueError('DATASPLIT has to be CROSSVAL or HOLDOUT')
@@ -253,7 +241,11 @@ if CLUSTER_ON_FREQ:
 #######################
 # CLASSIFICATION PART #
 #######################
-
+from numpy.random import seed
+from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
 ### CLASSIFY WITH RANDOM FORESTS
 
@@ -272,6 +264,66 @@ if DATASPLIT == 'CROSSVAL':
             clf=CLF_CHOICE,
             verbose=False,
         )
+
+        #### RECLASSIFY RANDOM FOREST LABELS WITH DIFFERENT CLASSIFIER (per score)
+        """
+        reclass predicted scores as [0, 1], [2], [3] separately
+        """
+        if isinstance(RECLASS_AFTER_RF, str):
+            reclassed_y_pred, reclassed_y_true, reclassed_og_idx = [], [], []
+            reclassed_idx_dict = {}  # dict which original indices belong to which reclass-fold/score
+            for reclass_i, score_predicted in enumerate([[0, 1], [2,], [3,]]):
+                # loop over predicted scores categories
+                idx_reclas = []
+                # print('RECLASSIFY PREDICTED SCORES ', score_predicted)
+                for fold in y_pred_dict.keys():
+                    # print(f'check fold {fold}')
+                    sel_reclas = [value in score_predicted for value in y_pred_dict[fold]]
+                    idx_reclas.extend(array(og_pred_idx[fold])[sel_reclas])
+                
+                reclassed_idx_dict[reclass_i] = idx_reclas
+                # print(f'total # of {score_predicted} value: {len(idx_reclas)}')
+                feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
+                reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
+                reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+                reclass_y =  pred_data.y[idx_reclas]
+                n_folds = len(reclass_y) // 35
+                if n_folds == 1: n_folds = 2
+                # print(f'\treclass X: {reclass_X.shape}, y: {reclass_y.shape}; {n_folds} FOLDS')
+                seed(27)  # np.random.seed
+                if RECLASS_AFTER_RF.upper() == 'RF':
+                    clf = RandomForestClassifier(random_state=27, n_estimators=500,
+                                                 class_weight='balanced',)
+                elif RECLASS_AFTER_RF.upper() == 'LOGREG':
+                    clf = LogisticRegression(random_state=27,solver='lbfgs',)
+                elif RECLASS_AFTER_RF.upper() == 'SVC':
+                    clf = SVC(kernel='linear', class_weight='balanced',
+                              gamma='scale', random_state=27,)
+
+                cv = StratifiedKFold(n_splits=n_folds, )
+                cv.get_n_splits(reclass_X, reclass_y)
+                for F, (train_idx, test_idx) in enumerate(
+                    cv.split(reclass_X, reclass_y)
+                ):
+                    # define training and test data per fold
+                    X_train, X_test = reclass_X[train_idx], reclass_X[test_idx]
+                    y_train, y_test = reclass_y[train_idx], reclass_y[test_idx]
+                    clf.fit(X=X_train, y=y_train)
+                    # save predictions for posthoc analysis and conf matrix
+                    preds = clf.predict(X=X_test)
+                    # store reclassed scores and corr indices in same order
+                    reclassed_y_pred.extend(preds)
+                    reclassed_y_true.extend(y_test)
+                    reclassed_og_idx.extend(array(idx_reclas)[test_idx])
+                    # reclass_cm = cv_models.multiclass_conf_matrix(trues, preds, labels=['0', '1', '2', '3-4'])
+                    # m, sd, _ = cv_models.get_penalties_from_conf_matr(reclass_cm)
+                    # print(reclass_cm)
+                    # print(f'\tpenalties mean: {m}, sd: {sd}')
+            # create new dicts for preds and trues
+            y_true_dict, y_pred_dict = {}, {}
+            y_true_dict['reclass'] = reclassed_y_true
+            y_pred_dict['reclass'] = reclassed_y_pred
+
 
 
     elif CLUSTER_ON_FREQ:
@@ -302,15 +354,39 @@ if DATASPLIT == 'HOLDOUT':
     if not CLUSTER_ON_FREQ:
         y_pred_dict, y_true_dict = perform_holdout(
             full_X=pred_data.X, full_y=pred_data.y,
-            full_modelname=MODEL_NAME
+            full_modelname=naming_dict['MODEL_NAME']
         )
+
+        if isinstance(RECLASS_AFTER_RF, str):
+            reclass_y_pred, reclass_y_true = [], []
+            # perform reclassification per predicted outcome group
+            feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
+
+            for reclass_i, og_preds in enumerate([[0, 1], [2,], [3,]]):
+                # select correct data to reclass
+                sel_idx = [s in og_preds for s in y_pred_dict['holdout']]
+                reclass_X = pred_data.X[sel_idx, :]  # select out indices for predicted score
+                reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+                reclass_y =  pred_data.y[sel_idx]
+                # select correct reclass modelname
+                reclass_model = (naming_dict['MODEL_NAME'][:-2] +
+                                 f'_reclass{RECLASS_AFTER_RF.upper()}{reclass_i}.P')
+                temp_y_pred, _ = perform_holdout(full_X=reclass_X, full_y=reclass_y,
+                                                  full_modelname=reclass_model)
+                reclass_y_pred.extend(temp_y_pred['holdout'])
+                reclass_y_true.extend(reclass_y)
+            # create new y_dicts after all reclass categories
+            y_pred_dict, y_true_dict = {}, {}
+            y_pred_dict['reclass'] = reclass_y_pred
+            y_true_dict['reclass'] = reclass_y_true
+
     
     elif CLUSTER_ON_FREQ:
         y_pred_dict, y_true_dict = perform_holdout(
             slow_X=slow_pred_data.X, slow_y=slow_pred_data.y,
             fast_X=fast_pred_data.X, fast_y=fast_pred_data.y,
-            slow_modelname=MODEL_NAME_SLOW,
-            fast_modelname=MODEL_NAME_FAST,
+            slow_modelname=naming_dict['MODEL_NAME_SLOW'],
+            fast_modelname=naming_dict['MODEL_NAME_FAST'],
         )
 
 # add traces classified on few-taps as separate dict fold
@@ -347,6 +423,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 
     # save model trained on FULL crossvalidation data
     if not CLUSTER_ON_FREQ:
+        # save general Random Forest model
         model_fname = f'{today}_{CLF_CHOICE}_UNCLUSTERED'
         if MAX_TAPS_PER_TRACE: model_fname += f'_{MAX_TAPS_PER_TRACE}taps'
         else: model_fname += f'_alltaps'
@@ -356,7 +433,23 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
             # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
             model_fname=model_fname,
         )
-    
+
+        # save reclassing models per fold / score-category [0: 0-1, 1: 2, 2: 3]
+        if isinstance(RECLASS_AFTER_RF, str):
+            feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
+
+            for reclass_i in reclassed_idx_dict.keys():
+                reclass_modelname = model_fname + f'_reclass{RECLASS_AFTER_RF.upper()}{reclass_i}'
+                idx_reclas = reclassed_idx_dict[reclass_i]
+                reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
+                reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+                reclass_y =  pred_data.y[idx_reclas]
+                saveload_models.save_model_in_cv(
+                    clf=CLF_CHOICE, X_CV=reclass_X, y_CV=reclass_y,
+                    # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
+                    model_fname=reclass_modelname,
+                )
+
     elif CLUSTER_ON_FREQ:
         for c_name, cluster_data in zip(
             ['fast', 'slow'], [fast_pred_data, slow_pred_data]
@@ -380,22 +473,24 @@ if TO_MASK_4: mc_labels = ['0', '1', '2', '3-4']
 else: mc_labels = ['0', '1', '2', '3', '4']
 
 # save slow and fast clusters seperately
-for key in y_pred_dict:
-    if key not in ['slow', 'fast']: continue
-    k_score = kappa(y_true_dict[key], y_pred_dict[key], weights='linear')
-    R, R_p = spearmanr(y_true_dict[key], y_pred_dict[key])
-    cmtemp = cv_models.multiclass_conf_matrix(
-        y_true=y_true_dict[key], y_pred=y_pred_dict[key],
-        labels=mc_labels,
-    )
-    print(key, cmtemp)
-    plot_results.plot_confMatrix_scatter(
-        y_true_dict[key], y_pred_dict[key],
-        R=R, K=k_score, CM=cmtemp,
-        to_save=TO_SAVE_FIG, fname=f'{FIG_FNAME}_{key.upper()}',
-    )
+if CLUSTER_ON_FREQ:
+    for key in y_pred_dict:
+        if key not in ['slow', 'fast']: continue
+        k_score = kappa(y_true_dict[key], y_pred_dict[key], weights='linear')
+        R, R_p = spearmanr(y_true_dict[key], y_pred_dict[key])
+        cmtemp = cv_models.multiclass_conf_matrix(
+            y_true=y_true_dict[key], y_pred=y_pred_dict[key],
+            labels=mc_labels,
+        )
+        print(key, cmtemp)
+        plot_results.plot_confMatrix_scatter(
+            y_true_dict[key], y_pred_dict[key],
+            R=R, K=k_score, CM=cmtemp,
+            to_save=TO_SAVE_FIG,
+            fname=f'{naming_dict["FIG_FNAME"]}_{key.upper()}',
+        )
 
-# create multiclass confusion matrix
+# create multiclass confusion matrix for all cross-val folds
 cm = cv_models.multiclass_conf_matrix(
     y_true=y_true_dict, y_pred=y_pred_dict,
     labels=mc_labels,
@@ -414,5 +509,5 @@ R, R_p = spearmanr(y_true_all, y_pred_all)
 plot_results.plot_confMatrix_scatter(
     y_true=y_true_all, y_pred=y_pred_all,
     R=R, K=k_score, CM=cm,
-    to_save=TO_SAVE_FIG, fname=FIG_FNAME,
+    to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
 )

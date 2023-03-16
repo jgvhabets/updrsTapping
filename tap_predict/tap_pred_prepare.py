@@ -166,6 +166,7 @@ def create_X_y_vectors(
     elif to_zscore:
         for ft_i in range(X.shape[1]):
             if save_STD_params:
+                # standardise features (in crossval), WITH saving
                 X[:, ft_i], std_mean, std_sd = z_score_array(X[:, ft_i], save_params=True)
                 params_list.append([std_mean, std_sd])
             else:
@@ -176,8 +177,9 @@ def create_X_y_vectors(
                         use_mean=use_STD_params_df.values[ft_i, 0],
                         use_sd=use_STD_params_df.values[ft_i, 1]
                     )
+                # standardise features (in crossval), WITHOUT saving
                 else:   
-                    X[:, ft_i] = z_score_array(X[:, ft_i])
+                    X[:, ft_i] = z_score_array(X[:, ft_i], save_params=False)
     
 
     # deal with missings
