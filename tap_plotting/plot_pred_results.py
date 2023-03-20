@@ -14,7 +14,7 @@ from retap_utils.utils_dataManagement import find_onedrive_path
 
 def plot_confMatrix_scatter(
     y_true, y_pred,
-    R=None, K=None, CM=None,
+    R=None, K=None, CM=None, icc=None, R_meth=None,
     mc_labels=['0', '1', '2', '3-4'],
     to_save=False, fname=None,
     to_show=False,
@@ -108,7 +108,7 @@ def plot_confMatrix_scatter(
     # ANNOTATE METRICS
     axes[1].annotate(
         (f'Mean Prediction Error: {mean_pen.round(2)} (sd: {std_pen.round(2)})'
-        f'\nR: {R.round(3)}, Kappa: {K.round(2)}'),
+        f'\n{R_meth} R: {R.round(2)},\nICC: {icc.round(2)}, Kappa: {K.round(2)}'),
         xy=(.5, -.3), ha='center', va='top',
         xycoords='axes fraction',
         fontsize=fs - 2,)

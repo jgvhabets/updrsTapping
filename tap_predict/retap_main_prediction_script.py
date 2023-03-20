@@ -12,9 +12,7 @@ import pickle
 from numpy import array, arange
 from pandas import DataFrame, read_csv
 from itertools import compress
-from scipy.stats import spearmanr
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import cohen_kappa_score as kappa
 import datetime as dt
 
 # own functions
@@ -38,7 +36,7 @@ import tap_plotting.plot_pred_results as plot_results
 FT_CLASS_DATE = '20230228'
 MAX_TAPS_PER_TRACE = 15  # should be None, 10, 15
 # define modeling
-DATASPLIT = 'HOLDOUT'  # should be CROSSVAL or HOLDOUT
+DATASPLIT = 'CROSSVAL'  # should be CROSSVAL or HOLDOUT
 CLF_CHOICE = 'RF'
 CLUSTER_ON_FREQ = False
 N_CLUSTERS_FREQ = 2
@@ -49,7 +47,7 @@ N_RANDOM_SPLIT = 41  # 01.03.23, default None if split has to be found
 USE_MODEL_DATE = '20230316' # changed clustering feats and reclassifying
 
 # define saving or plotting
-SAVE_TRAINED_MODEL = True
+SAVE_TRAINED_MODEL = False
 TO_PLOT = True
 TO_SAVE_FIG = True
 
@@ -497,6 +495,11 @@ cm = cv_models.multiclass_conf_matrix(
 )
 
 # create metrics for whole data split
+
+from sklearn.metrics import cohen_kappa_score as kappa
+from scipy.stats import spearmanr, pearsonr
+from pingouin import intraclass_corr
+
 y_true_all, y_pred_all = [], []
 
 for key in y_true_dict.keys():
@@ -505,9 +508,30 @@ for key in y_true_dict.keys():
 
 k_score = kappa(y_true_all, y_pred_all, weights='linear')
 R, R_p = spearmanr(y_true_all, y_pred_all)
+pearsonR, prsR_p = pearsonr(y_true_all, y_pred_all)
+
+
+# calculate ICC
+icc_scores = y_true_all + y_pred_all
+icc_judges = ['clin'] * len(y_true_all) + ['model'] * len(y_pred_all)
+icc_ids = [str(i) for i in range(len(y_true_all))] * 2
+try:
+    icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]),
+                    columns=['IDs', 'Judges', 'Scores'])
+except:
+    icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]).T,
+                    columns=['IDs', 'Judges', 'Scores'])
+    print('transposed ICC dat')
+
+icc = intraclass_corr(data=icc_dat, targets='IDs', raters='Judges',
+                         ratings='Scores')
+icc_score = icc.iloc[5]['ICC']  # 5 row is two-way, mixed effect, k-raters
+print(icc)
+
+print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prsR_p}')
 
 plot_results.plot_confMatrix_scatter(
     y_true=y_true_all, y_pred=y_pred_all,
-    R=R, K=k_score, CM=cm,
+    R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
     to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
 )
