@@ -26,7 +26,7 @@ import tap_plotting.retap_plot_clusters as plot_cluster
 
 from tap_predict import retap_cv_models as cv_models
 from tap_predict import save_load_pred_models as saveload_models
-from tap_predict.perform_holdout import perform_holdout
+from tap_predict.perform_holdout import perform_holdout, holdout_reclassification
 
 import tap_plotting.plot_pred_results as plot_results
 
@@ -34,20 +34,22 @@ import tap_plotting.plot_pred_results as plot_results
 ### SET VARIABLES (load later from json) ###
 # define features to use
 FT_CLASS_DATE = '20230228'
-MAX_TAPS_PER_TRACE = 15  # should be None, 10, 15
+MAX_TAPS_PER_TRACE = None  # should be None, 10, 15
 # define modeling
-DATASPLIT = 'CROSSVAL'  # should be CROSSVAL or HOLDOUT
+DATASPLIT = 'HOLDOUT'  # should be CROSSVAL or HOLDOUT
 CLF_CHOICE = 'RF'
 CLUSTER_ON_FREQ = False
 N_CLUSTERS_FREQ = 2
-RECLASS_AFTER_RF = 'LOGREG'  # RF, LOGREG, SVC or None
+RECLASS_AFTER_RF = None   # RF, LOGREG, SVC or None
+RECLASS_SETTINGS = {'scores': [[1,], [2,]],
+                    'labels': ['1', '2']}
 N_RANDOM_SPLIT = 41  # 01.03.23, default None if split has to be found
 # if holdout, choose model
 # USE_MODEL_DATE = '20230303' # DGKN version
-USE_MODEL_DATE = '20230316' # changed clustering feats and reclassifying
+USE_MODEL_DATE = '20230321' # changed clustering feats and reclassifying
 
 # define saving or plotting
-SAVE_TRAINED_MODEL = False
+SAVE_TRAINED_MODEL = True
 TO_PLOT = True
 TO_SAVE_FIG = True
 
@@ -61,6 +63,7 @@ CUTOFF_TAPS_3 = 9
 TO_ZSCORE = True
 TO_NORM = False
 TO_MASK_4 = True
+TO_MASK_0 = False
 
 
 # build names for models, params and figures to use
@@ -69,7 +72,7 @@ naming_dict = pred_help.get_model_param_fig_names(
     CLUSTER_ON_FREQ=CLUSTER_ON_FREQ, DATASPLIT=DATASPLIT,
     RECLASS_AFTER_RF=RECLASS_AFTER_RF,
     MAX_TAPS_PER_TRACE=MAX_TAPS_PER_TRACE,
-    testDev=False,
+    testDev=False, MASK_0=TO_MASK_0,
 )
 
 CLASS_FEATS = [
@@ -101,9 +104,11 @@ RECLASS_FEATS = [
     'coefVar_tapRMS',
     'coefVar_impactRMS',
     'coefVar_intraTapInt',
+    'slope_intraTapInt',
     'mean_raise_velocity',
-    'slope_impactRMS',
+    # 'slope_impactRMS',
     'coefVar_tap_entropy',
+    'slope_tap_entropy'
 ]
 
 
@@ -190,6 +195,7 @@ pred_data = pred_prep.create_X_y_vectors(
     to_norm=TO_NORM,
     to_zscore=TO_ZSCORE,
     to_mask_4=TO_MASK_4,
+    to_mask_0=TO_MASK_0,
     return_ids=True,
     as_class=True,
     mask_nans=True,
@@ -268,59 +274,78 @@ if DATASPLIT == 'CROSSVAL':
         reclass predicted scores as [0, 1], [2], [3] separately
         """
         if isinstance(RECLASS_AFTER_RF, str):
-            reclassed_y_pred, reclassed_y_true, reclassed_og_idx = [], [], []
-            reclassed_idx_dict = {}  # dict which original indices belong to which reclass-fold/score
-            for reclass_i, score_predicted in enumerate([[0, 1], [2,], [3,]]):
-                # loop over predicted scores categories
-                idx_reclas = []
-                # print('RECLASSIFY PREDICTED SCORES ', score_predicted)
-                for fold in y_pred_dict.keys():
-                    # print(f'check fold {fold}')
-                    sel_reclas = [value in score_predicted for value in y_pred_dict[fold]]
-                    idx_reclas.extend(array(og_pred_idx[fold])[sel_reclas])
-                
-                reclassed_idx_dict[reclass_i] = idx_reclas
-                # print(f'total # of {score_predicted} value: {len(idx_reclas)}')
-                feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
-                reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
-                reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
-                reclass_y =  pred_data.y[idx_reclas]
-                n_folds = len(reclass_y) // 35
-                if n_folds == 1: n_folds = 2
-                # print(f'\treclass X: {reclass_X.shape}, y: {reclass_y.shape}; {n_folds} FOLDS')
-                seed(27)  # np.random.seed
-                if RECLASS_AFTER_RF.upper() == 'RF':
-                    clf = RandomForestClassifier(random_state=27, n_estimators=500,
-                                                 class_weight='balanced',)
-                elif RECLASS_AFTER_RF.upper() == 'LOGREG':
-                    clf = LogisticRegression(random_state=27,solver='lbfgs',)
-                elif RECLASS_AFTER_RF.upper() == 'SVC':
-                    clf = SVC(kernel='linear', class_weight='balanced',
-                              gamma='scale', random_state=27,)
+            reclassed_idx = {}
+            for scores_to_recl, recl_label in zip(
+                RECLASS_SETTINGS['scores'], RECLASS_SETTINGS['labels']
+            ):
+            # reclassify scores in defined list
+                (y_true_dict,
+                 y_pred_dict,
+                 og_pred_idx, 
+                 reclassed_idx[recl_label]) = pred_help.perform_reclassification(
+                    RECLASS_AFTER_RF=RECLASS_AFTER_RF,
+                    scores_to_reclass=scores_to_recl,
+                    og_pred_idx=og_pred_idx,
+                    y_pred_dict=y_pred_dict, y_true_dict=y_true_dict,
+                    RECLASS_FEATS=RECLASS_FEATS,
+                    CLASS_FEATS=CLASS_FEATS,
+                    pred_data=pred_data,
+                )
 
-                cv = StratifiedKFold(n_splits=n_folds, )
-                cv.get_n_splits(reclass_X, reclass_y)
-                for F, (train_idx, test_idx) in enumerate(
-                    cv.split(reclass_X, reclass_y)
-                ):
-                    # define training and test data per fold
-                    X_train, X_test = reclass_X[train_idx], reclass_X[test_idx]
-                    y_train, y_test = reclass_y[train_idx], reclass_y[test_idx]
-                    clf.fit(X=X_train, y=y_train)
-                    # save predictions for posthoc analysis and conf matrix
-                    preds = clf.predict(X=X_test)
-                    # store reclassed scores and corr indices in same order
-                    reclassed_y_pred.extend(preds)
-                    reclassed_y_true.extend(y_test)
-                    reclassed_og_idx.extend(array(idx_reclas)[test_idx])
-                    # reclass_cm = cv_models.multiclass_conf_matrix(trues, preds, labels=['0', '1', '2', '3-4'])
-                    # m, sd, _ = cv_models.get_penalties_from_conf_matr(reclass_cm)
-                    # print(reclass_cm)
-                    # print(f'\tpenalties mean: {m}, sd: {sd}')
-            # create new dicts for preds and trues
-            y_true_dict, y_pred_dict = {}, {}
-            y_true_dict['reclass'] = reclassed_y_true
-            y_pred_dict['reclass'] = reclassed_y_pred
+
+            # reclassed_y_pred, reclassed_y_true, reclassed_og_idx = [], [], []
+            # reclassed_idx_dict = {}  # dict which original indices belong to which reclass-fold/score
+            # for reclass_i, score_predicted in enumerate([[0, 1], [2,], [3,]]):
+            #     # loop over predicted scores categories
+            #     idx_reclas = []
+            #     # print('RECLASSIFY PREDICTED SCORES ', score_predicted)
+            #     for fold in y_pred_dict.keys():
+            #         # print(f'check fold {fold}')
+            #         sel_reclas = [value in score_predicted for value in y_pred_dict[fold]]
+            #         idx_reclas.extend(array(og_pred_idx[fold])[sel_reclas])
+
+            #     reclassed_idx_dict[reclass_i] = idx_reclas
+            #     # print(f'total # of {score_predicted} value: {len(idx_reclas)}')
+            #     feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
+            #     reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
+            #     reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+            #     reclass_y =  pred_data.y[idx_reclas]
+            #     n_folds = len(reclass_y) // 35
+            #     if n_folds == 1: n_folds = 2
+            #     # print(f'\treclass X: {reclass_X.shape}, y: {reclass_y.shape}; {n_folds} FOLDS')
+            #     seed(27)  # np.random.seed
+            #     if RECLASS_AFTER_RF.upper() == 'RF':
+            #         clf = RandomForestClassifier(random_state=27, n_estimators=500,
+            #                                      class_weight='balanced',)
+            #     elif RECLASS_AFTER_RF.upper() == 'LOGREG':
+            #         clf = LogisticRegression(random_state=27,solver='lbfgs',)
+            #     elif RECLASS_AFTER_RF.upper() == 'SVC':
+            #         clf = SVC(kernel='linear', class_weight='balanced',
+            #                   gamma='scale', random_state=27,)
+
+            #     cv = StratifiedKFold(n_splits=n_folds, )
+            #     cv.get_n_splits(reclass_X, reclass_y)
+            #     for F, (train_idx, test_idx) in enumerate(
+            #         cv.split(reclass_X, reclass_y)
+            #     ):
+            #         # define training and test data per fold
+            #         X_train, X_test = reclass_X[train_idx], reclass_X[test_idx]
+            #         y_train, y_test = reclass_y[train_idx], reclass_y[test_idx]
+            #         clf.fit(X=X_train, y=y_train)
+            #         # save predictions for posthoc analysis and conf matrix
+            #         preds = clf.predict(X=X_test)
+            #         # store reclassed scores and corr indices in same order
+            #         reclassed_y_pred.extend(preds)
+            #         reclassed_y_true.extend(y_test)
+            #         reclassed_og_idx.extend(array(idx_reclas)[test_idx])
+            #         # reclass_cm = cv_models.multiclass_conf_matrix(trues, preds, labels=['0', '1', '2', '3-4'])
+            #         # m, sd, _ = cv_models.get_penalties_from_conf_matr(reclass_cm)
+            #         # print(reclass_cm)
+            #         # print(f'\tpenalties mean: {m}, sd: {sd}')
+            # # create new dicts for preds and trues
+            # y_true_dict, y_pred_dict = {}, {}
+            # y_true_dict['reclass'] = reclassed_y_true
+            # y_pred_dict['reclass'] = reclassed_y_pred
 
 
 
@@ -347,7 +372,7 @@ if DATASPLIT == 'CROSSVAL':
                 y_pred_dict[f'{c_name}_{i_d}'] = y_pred_c[i_d]
 
 
-if DATASPLIT == 'HOLDOUT':
+elif DATASPLIT == 'HOLDOUT':
     
     if not CLUSTER_ON_FREQ:
         y_pred_dict, y_true_dict = perform_holdout(
@@ -356,27 +381,52 @@ if DATASPLIT == 'HOLDOUT':
         )
 
         if isinstance(RECLASS_AFTER_RF, str):
-            reclass_y_pred, reclass_y_true = [], []
+            # reclass_y_pred, reclass_y_true = [], []
+            # reclassed_idx = {}
+            og_pred_idx = {}
+            og_pred_idx['holdout'] = pred_data.ids  # add for reclassification
+
             # perform reclassification per predicted outcome group
             feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
 
-            for reclass_i, og_preds in enumerate([[0, 1], [2,], [3,]]):
-                # select correct data to reclass
-                sel_idx = [s in og_preds for s in y_pred_dict['holdout']]
-                reclass_X = pred_data.X[sel_idx, :]  # select out indices for predicted score
-                reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
-                reclass_y =  pred_data.y[sel_idx]
-                # select correct reclass modelname
-                reclass_model = (naming_dict['MODEL_NAME'][:-2] +
-                                 f'_reclass{RECLASS_AFTER_RF.upper()}{reclass_i}.P')
-                temp_y_pred, _ = perform_holdout(full_X=reclass_X, full_y=reclass_y,
-                                                  full_modelname=reclass_model)
-                reclass_y_pred.extend(temp_y_pred['holdout'])
-                reclass_y_true.extend(reclass_y)
-            # create new y_dicts after all reclass categories
-            y_pred_dict, y_true_dict = {}, {}
-            y_pred_dict['reclass'] = reclass_y_pred
-            y_true_dict['reclass'] = reclass_y_true
+            # for reclass_i, og_preds in enumerate([[0, 1], [2,], [3,]]):
+            for scores_to_recl, recl_label in zip(
+                RECLASS_SETTINGS['scores'], RECLASS_SETTINGS['labels']
+            ):
+                (y_true_dict,
+                 y_pred_dict,
+                 og_pred_idx) = holdout_reclassification(
+                    RECLASS_AFTER_RF=RECLASS_AFTER_RF,
+                    scores_to_reclass=scores_to_recl,
+                    recl_label=recl_label,
+                    X_holdout=pred_data.X,
+                    ids_holdout=pred_data.ids,
+                    og_pred_idx=og_pred_idx,
+                    y_pred_dict=y_pred_dict,
+                    y_true_dict=y_true_dict,
+                    RECLASS_FEATS=RECLASS_FEATS,
+                    CLASS_FEATS=CLASS_FEATS,
+                    model_name=naming_dict['MODEL_NAME']
+                )
+
+
+            #     # select correct data to reclass
+            #     sel_idx = [s in scores_to_recl for s in y_pred_dict['holdout']]
+            #     reclass_X = pred_data.X[sel_idx, :]  # select out indices for predicted score
+            #     reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+            #     reclass_y =  pred_data.y[sel_idx]
+            #     # select correct reclass modelname
+            #     reclass_model = (naming_dict['MODEL_NAME'][:-2] +
+            #                      f'_reclass{RECLASS_AFTER_RF.upper()}'
+            #                      f'{recl_label}.P')
+            #     temp_y_pred, _ = perform_holdout(full_X=reclass_X, full_y=reclass_y,
+            #                                       full_modelname=reclass_model)
+            #     reclass_y_pred.extend(temp_y_pred['holdout'])
+            #     reclass_y_true.extend(reclass_y)
+            # # create new y_dicts after all reclass categories
+            # y_pred_dict, y_true_dict = {}, {}
+            # y_pred_dict['reclass'] = reclass_y_pred
+            # y_true_dict['reclass'] = reclass_y_true
 
     
     elif CLUSTER_ON_FREQ:
@@ -401,6 +451,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
     
     # save std parameters for classification
     fname = f'{today}_STD_params'
+    if TO_MASK_0: fname += '_mask0' 
     if MAX_TAPS_PER_TRACE: fname += f'_{MAX_TAPS_PER_TRACE}taps'
     else: fname += '_alltaps'
     STD_params.to_csv(
@@ -420,9 +471,10 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
         )
 
     # save model trained on FULL crossvalidation data
-    if not CLUSTER_ON_FREQ:
+    elif not CLUSTER_ON_FREQ:
         # save general Random Forest model
         model_fname = f'{today}_{CLF_CHOICE}_UNCLUSTERED'
+        if TO_MASK_0: model_fname += '_mask0' 
         if MAX_TAPS_PER_TRACE: model_fname += f'_{MAX_TAPS_PER_TRACE}taps'
         else: model_fname += f'_alltaps'
 
@@ -436,14 +488,17 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
         if isinstance(RECLASS_AFTER_RF, str):
             feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
 
-            for reclass_i in reclassed_idx_dict.keys():
-                reclass_modelname = model_fname + f'_reclass{RECLASS_AFTER_RF.upper()}{reclass_i}'
-                idx_reclas = reclassed_idx_dict[reclass_i]
+            for score_to_reclas in reclassed_idx.keys():
+                idx_reclas = reclassed_idx[score_to_reclas]
+                reclass_modelname = (model_fname +
+                                     f'_reclass{RECLASS_AFTER_RF.upper()}'
+                                     f'{score_to_reclas}')
                 reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
                 reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
                 reclass_y =  pred_data.y[idx_reclas]
                 saveload_models.save_model_in_cv(
-                    clf=CLF_CHOICE, X_CV=reclass_X, y_CV=reclass_y,
+                    clf=RECLASS_AFTER_RF,
+                    X_CV=reclass_X, y_CV=reclass_y,
                     # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
                     model_fname=reclass_modelname,
                 )
@@ -467,7 +522,9 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 # SAVING RESULTS #
 ##################
 
-if TO_MASK_4: mc_labels = ['0', '1', '2', '3-4']
+if TO_MASK_4:
+    if TO_MASK_0: mc_labels = ['0-1', '1', '2', '3-4']
+    else: mc_labels = ['0', '1', '2', '3-4']
 else: mc_labels = ['0', '1', '2', '3', '4']
 
 # save slow and fast clusters seperately

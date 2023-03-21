@@ -70,3 +70,55 @@ def perform_holdout(
     return y_pred_dict, y_true_dict
 
 
+def holdout_reclassification(
+    RECLASS_AFTER_RF: str, scores_to_reclass: list,
+    recl_label, og_pred_idx, y_pred_dict, y_true_dict,
+    RECLASS_FEATS, CLASS_FEATS, X_holdout, ids_holdout, model_name
+):
+    """
+    Performs the reclassification of labels after
+    initial RF classifier in hold out setting
+    """
+    new_y_true_dict, new_y_pred_dict = {}, {}
+    new_idx_dict = {}  # dict which original indices belong to which reclass-fold/score
+    (new_y_pred_dict['reclass'], new_y_pred_dict['no_reclass'],
+     new_y_true_dict['reclass'], new_y_true_dict['no_reclass'],
+     new_idx_dict['reclass'], new_idx_dict['no_reclass']
+    ) = [], [],[], [], [], []
+
+
+    # reclass_y_pred = []
+    # perform reclassification per predicted outcome group
+    feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
+
+    # select correct data to reclass
+    for key in y_pred_dict.keys():
+        # hold-out predictions saved under key 'holdout'        
+        sel_bool = [s in scores_to_reclass for s in y_pred_dict[key]]
+        new_y_true_dict['reclass'].extend(np.array(y_true_dict[key])[sel_bool])
+        new_idx_dict['reclass'].extend(np.array(og_pred_idx[key])[sel_bool])
+
+        # add not selected samples
+        no_reclass_bool = ~np.array(sel_bool)
+        # select X and y NOT selected for reclass
+        new_y_pred_dict['no_reclass'].extend(np.array(y_pred_dict[key])[no_reclass_bool])
+        new_y_true_dict['no_reclass'].extend(np.array(y_true_dict[key])[no_reclass_bool])
+        new_idx_dict['no_reclass'].extend(np.array(og_pred_idx[key])[no_reclass_bool])
+    
+    # select X for reclass based on included ids
+    X_bool_sel = [trace_id in new_idx_dict['reclass'] for trace_id in ids_holdout]
+    reclass_X = X_holdout[X_bool_sel, :]
+    reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
+       
+    # select correct reclass modelname
+    reclass_model = (model_name[:-2] +
+                     f'_reclass{RECLASS_AFTER_RF.upper()}'
+                     f'{recl_label}.P')
+    temp_y_pred, _ = perform_holdout(full_X=reclass_X, full_y=new_y_true_dict['reclass'],
+                                     full_modelname=reclass_model)
+    new_y_pred_dict['reclass'] = temp_y_pred['holdout']
+    # # create new y_dicts after all reclass categories
+    # y_pred_dict, y_true_dict = {}, {}
+    # y_pred_dict['reclass'] = reclass_y_pred
+
+    return new_y_true_dict, new_y_pred_dict, new_idx_dict

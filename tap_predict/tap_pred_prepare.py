@@ -199,6 +199,11 @@ def create_X_y_vectors(
         # Mask UPDRS 4 -> 3 merge (too low number)
         mask = y == 4
         y[mask] = 3
+    
+    if to_mask_0:
+        # Mask UPDRS 0 -> 1 merge (too low number)
+        mask = y == 0
+        y[mask] = 1
 
 
     if as_class:

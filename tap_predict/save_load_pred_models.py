@@ -32,7 +32,7 @@ def save_model_in_cv(
     np.random.seed(random_state)
 
     # retrain model on ALL cross-validation data
-    if clf == 'RF':
+    if clf.upper() == 'RF':
         clf = RandomForestClassifier(
             n_estimators=1000,  # 500
             max_depth=None,
@@ -42,8 +42,12 @@ def save_model_in_cv(
             class_weight='balanced',
         )
     
-    elif clf == 'LogReg':
+    elif clf.upper() == 'LOGREG':
         clf = LogisticRegression(random_state=random_state, solver='lbfgs',)
+
+    elif clf.upper() == 'SVC':
+        clf = SVC(kernel='linear', class_weight='balanced',
+                  gamma='scale', random_state=27,)
 
     # fit model
     clf.fit(X=X_CV, y=y_CV)
