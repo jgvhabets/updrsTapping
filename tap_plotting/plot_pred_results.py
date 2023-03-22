@@ -17,7 +17,7 @@ from retap_utils.utils_dataManagement import find_onedrive_path
 def plot_confMatrix_scatter(
     y_true, y_pred,
     R=None, K=None, CM=None, icc=None, R_meth=None,
-    plot_scatter=True, plot_box=True,
+    plot_scatter=True, plot_box=False, plot_violin=False,
     mc_labels=['0', '1', '2', '3-4'],
     to_save=False, fname=None, to_show=False,
 ):
@@ -33,26 +33,28 @@ def plot_confMatrix_scatter(
         axes[0].scatter(y_pred+jitt2, y_true+jitt,
                         alpha=.2,)
     
-    if plot_box:
-        medianprops = dict(linestyle=None, linewidth=0,)
-        meanlineprops = dict(linestyle='-', linewidth=2.5, color='firebrick')
-
+    if plot_box or plot_violin:
+        
         box_lists = [[], [], [], []]  # for boxplots, fill 4 lists with true scores per predicted score in lists
         for pred_value, true_value in zip(y_pred, y_true):
             box_lists[pred_value].append(true_value)  # append true-value (Y-axis) to the list of the predicted value (X-axis)
 
-        # axes[0].boxplot(box_lists, positions=range(4),
-        #                 meanline=True, showmeans=True,
-        #                 whis=.5         , medianprops=medianprops,
-        #                 meanprops=meanlineprops,)
+        if plot_box:
+            medianprops = dict(linestyle=None, linewidth=0,)
+            meanlineprops = dict(linestyle='-', linewidth=2.5,
+                                 color='firebrick')
+            axes[0].boxplot(box_lists, positions=range(4),
+                            meanline=True, showmeans=True,
+                            whis=.5, medianprops=medianprops,
+                            meanprops=meanlineprops,)
 
-        viol_parts = axes[0].violinplot(box_lists, positions=range(4),
-                           showmeans=True, showextrema=False,
-                            showmedians=False,)
-        print(viol_parts.keys())
-        viol_parts['cmeans'].set_facecolor('firebrick')
-        viol_parts['cmeans'].set_linewidth(3)
-        viol_parts['cmeans'].set_alpha(.8)
+        if plot_violin:
+            viol_parts = axes[0].violinplot(box_lists, positions=range(4),
+                            showmeans=True, showextrema=False,
+                                showmedians=False,)
+            viol_parts['cmeans'].set_facecolor('firebrick')
+            viol_parts['cmeans'].set_linewidth(3)
+            viol_parts['cmeans'].set_alpha(.8)
 
     axes[0].set_ylabel('True Tap Score', weight='bold', fontsize=fs)
     axes[0].set_xlabel('Predicted Tap Score', weight='bold', fontsize=fs)
@@ -146,6 +148,87 @@ def plot_confMatrix_scatter(
             find_onedrive_path('figures'),
             'prediction'
         )
-        plt.savefig(os.path.join(path, fname), dpi=150, facecolor='w',)
+        plt.savefig(os.path.join(path, fname), dpi=300, facecolor='w',)
         print(f'Saved Fig "{fname}" in {path}')
     plt.close()
+
+
+
+def plot_holdout_per_sub(
+    y_true_dict, y_pred_dict, og_pred_idx,
+    subs_in_holdout, mc_labels=['0', '1', '2', '3-4'],
+    fs=14,
+    to_save=False, fname=None, to_show=False,
+):
+
+    fig, axes = plt.subplots(int(len(subs_in_holdout) / 2), 2,
+                             figsize=(8, 12),
+                            #  sharex=True, sharey=True,
+                             )
+            
+    axes = axes.flatten()
+
+    all_traceids, all_preds, all_trues = [], [], []
+    for key in og_pred_idx.keys():
+        all_traceids.extend(og_pred_idx[key])
+        all_trues.extend(y_true_dict[key])
+        all_preds.extend(y_pred_dict[key])
+
+    for n, sub in enumerate(subs_in_holdout):
+        axes[n].set_title(f'Subject {sub}', weight='bold',
+                          fontsize=fs, c='darkgray')
+        
+        # sub_traces = [t for t in all_traceids if t.startswith(sub)]
+        sub_preds = [v for t, v in zip(all_traceids, all_preds)
+                     if t.startswith(sub)]
+        sub_trues = [v for t, v in zip(all_traceids, all_trues)
+                     if t.startswith(sub)]
+        
+        jitt = np.random.uniform(low=-.2, high=0.2, size=len(sub_preds))
+        jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(sub_preds))
+        axes[n].scatter(sub_preds+jitt2, sub_trues+jitt)
+
+        # box_lists = [[], [], [], []]  # for boxplots, fill 4 lists with true scores per predicted score in lists
+        # for pred_value, true_value in zip(sub_preds, sub_trues):
+        #     box_lists[pred_value].append(true_value)  # append true-value (Y-axis) to the list of the predicted value (X-axis)
+        
+        # try:
+        #     viol_parts = axes[n].violinplot(
+        #         box_lists, positions=range(4),
+        #         showmeans=True, showextrema=False,
+        #         showmedians=False,)
+        #     viol_parts['cmeans'].set_facecolor('firebrick')
+        #     viol_parts['cmeans'].set_linewidth(3)
+        #     viol_parts['cmeans'].set_alpha(.8)
+        # except ValueError:
+        #     axes[n].scatter(sub_preds, sub_trues)
+
+        
+        axes[n].set_xticks(range(4))
+        axes[n].set_yticks(range(4))
+        axes[n].spines[['right', 'top']].set_visible(False)
+        axes[n].set_yticklabels(mc_labels, weight='bold', fontsize=fs)
+        axes[n].set_xticklabels(mc_labels, weight='bold', fontsize=fs)
+        axes[n].set_xlim(-.2, 3.2)
+        axes[n].set_ylim(-.2, 3.2)
+
+    for n in range(0, len(subs_in_holdout), 2):
+        axes[n].set_ylabel('True', weight='bold', fontsize=fs)
+    for n in [8, 9]:
+        axes[n].set_xlabel('Predicted', weight='bold', fontsize=fs)
+
+    
+    plt.tight_layout(pad=.5,
+                    #  h_pad=.1, w_pad=.1,
+                     )
+
+    if to_save:
+        path = os.path.join(
+            find_onedrive_path('figures'),
+            'prediction'
+        )
+        plt.savefig(os.path.join(path, fname), dpi=300, facecolor='w',)
+        print(f'Saved Fig "{fname}" in {path}')
+        plt.close()
+    else:
+        plt.show()

@@ -65,7 +65,7 @@ TO_NORM = False
 TO_MASK_4 = True
 TO_MASK_0 = False
 
-TESTING = True
+TESTING = False
 
 # build names for models, params and figures to use
 naming_dict = pred_help.get_model_param_fig_names(
@@ -182,7 +182,8 @@ if SCORE_FEW_TAPS_3:
         array([t.startswith(s) for s in datasplit_subs_incl]).any()
         for t in classf_taps_3
     ]
-    TRACES_EXCL.extend(list(compress(classf_taps_3, sel)))  # exclude classified traces from prediction
+    trace_ids_fewTaps = list(compress(classf_taps_3, sel))
+    TRACES_EXCL.extend(trace_ids_fewTaps)  # exclude classified traces from prediction
     y_pred_fewTaps = list(compress(y_pred_fewTaps, sel))  # store predicted value and true values
     y_true_fewTaps = list(compress(y_true_fewTaps, sel))
 
@@ -243,6 +244,11 @@ if CLUSTER_ON_FREQ:
         pred_data, y_clusters, cluster_data.X, CLUSTER_FEATS
     )
 
+if DATASPLIT == 'HOLDOUT':
+    subs_in_holdout = list(trace_ids_fewTaps) + list(pred_data.ids)
+    subs_in_holdout = [t[:6] for t in subs_in_holdout]
+    subs_in_holdout = list(set(subs_in_holdout))
+
 #######################
 # CLASSIFICATION PART #
 #######################
@@ -294,62 +300,6 @@ if DATASPLIT == 'CROSSVAL':
                 )
 
 
-            # reclassed_y_pred, reclassed_y_true, reclassed_og_idx = [], [], []
-            # reclassed_idx_dict = {}  # dict which original indices belong to which reclass-fold/score
-            # for reclass_i, score_predicted in enumerate([[0, 1], [2,], [3,]]):
-            #     # loop over predicted scores categories
-            #     idx_reclas = []
-            #     # print('RECLASSIFY PREDICTED SCORES ', score_predicted)
-            #     for fold in y_pred_dict.keys():
-            #         # print(f'check fold {fold}')
-            #         sel_reclas = [value in score_predicted for value in y_pred_dict[fold]]
-            #         idx_reclas.extend(array(og_pred_idx[fold])[sel_reclas])
-
-            #     reclassed_idx_dict[reclass_i] = idx_reclas
-            #     # print(f'total # of {score_predicted} value: {len(idx_reclas)}')
-            #     feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
-            #     reclass_X = pred_data.X[idx_reclas, :]  # select out indices for predicted score
-            #     reclass_X = reclass_X[:, feat_sel]  # select out features to include for reclass
-            #     reclass_y =  pred_data.y[idx_reclas]
-            #     n_folds = len(reclass_y) // 35
-            #     if n_folds == 1: n_folds = 2
-            #     # print(f'\treclass X: {reclass_X.shape}, y: {reclass_y.shape}; {n_folds} FOLDS')
-            #     seed(27)  # np.random.seed
-            #     if RECLASS_AFTER_RF.upper() == 'RF':
-            #         clf = RandomForestClassifier(random_state=27, n_estimators=500,
-            #                                      class_weight='balanced',)
-            #     elif RECLASS_AFTER_RF.upper() == 'LOGREG':
-            #         clf = LogisticRegression(random_state=27,solver='lbfgs',)
-            #     elif RECLASS_AFTER_RF.upper() == 'SVC':
-            #         clf = SVC(kernel='linear', class_weight='balanced',
-            #                   gamma='scale', random_state=27,)
-
-            #     cv = StratifiedKFold(n_splits=n_folds, )
-            #     cv.get_n_splits(reclass_X, reclass_y)
-            #     for F, (train_idx, test_idx) in enumerate(
-            #         cv.split(reclass_X, reclass_y)
-            #     ):
-            #         # define training and test data per fold
-            #         X_train, X_test = reclass_X[train_idx], reclass_X[test_idx]
-            #         y_train, y_test = reclass_y[train_idx], reclass_y[test_idx]
-            #         clf.fit(X=X_train, y=y_train)
-            #         # save predictions for posthoc analysis and conf matrix
-            #         preds = clf.predict(X=X_test)
-            #         # store reclassed scores and corr indices in same order
-            #         reclassed_y_pred.extend(preds)
-            #         reclassed_y_true.extend(y_test)
-            #         reclassed_og_idx.extend(array(idx_reclas)[test_idx])
-            #         # reclass_cm = cv_models.multiclass_conf_matrix(trues, preds, labels=['0', '1', '2', '3-4'])
-            #         # m, sd, _ = cv_models.get_penalties_from_conf_matr(reclass_cm)
-            #         # print(reclass_cm)
-            #         # print(f'\tpenalties mean: {m}, sd: {sd}')
-            # # create new dicts for preds and trues
-            # y_true_dict, y_pred_dict = {}, {}
-            # y_true_dict['reclass'] = reclassed_y_true
-            # y_pred_dict['reclass'] = reclassed_y_pred
-
-
-
     elif CLUSTER_ON_FREQ:
         nFolds = 3
         y_pred_dict, y_proba_dict, y_true_dict, og_pred_idx = {}, {}, {}, {}
@@ -380,12 +330,14 @@ elif DATASPLIT == 'HOLDOUT':
             full_X=pred_data.X, full_y=pred_data.y,
             full_modelname=naming_dict['MODEL_NAME']
         )
+        og_pred_idx = {}
+        og_pred_idx['holdout'] = pred_data.ids  # add for reclassification or tracing back original subjects
 
         if isinstance(RECLASS_AFTER_RF, str):
             # reclass_y_pred, reclass_y_true = [], []
             # reclassed_idx = {}
-            og_pred_idx = {}
-            og_pred_idx['holdout'] = pred_data.ids  # add for reclassification
+            # og_pred_idx = {}
+            # og_pred_idx['holdout'] = pred_data.ids  # add for reclassification
 
             # perform reclassification per predicted outcome group
             feat_sel = [f in RECLASS_FEATS for f in CLASS_FEATS]
@@ -442,6 +394,7 @@ elif DATASPLIT == 'HOLDOUT':
 if SCORE_FEW_TAPS_3:
     y_true_dict['fewtaps'] = y_true_fewTaps
     y_pred_dict['fewtaps'] = y_pred_fewTaps
+    og_pred_idx['fewtaps'] = trace_ids_fewTaps
 
 
 ###################################
@@ -538,7 +491,7 @@ if CLUSTER_ON_FREQ:
             y_true=y_true_dict[key], y_pred=y_pred_dict[key],
             labels=mc_labels,
         )
-        print(key, cmtemp)
+
         plot_results.plot_confMatrix_scatter(
             y_true_dict[key], y_pred_dict[key],
             R=R, K=k_score, CM=cmtemp,
@@ -588,9 +541,16 @@ print(icc)
 
 print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prsR_p}')
 
+
+
 if TO_PLOT:
     plot_results.plot_confMatrix_scatter(
-        y_true=y_true_all, y_pred=y_pred_all, plot_box=True,
+        y_true=y_true_all, y_pred=y_pred_all, plot_violin=True,
         R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
         to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
+    )
+    plot_results.plot_holdout_per_sub(
+        y_true_dict, y_pred_dict, og_pred_idx,
+        subs_in_holdout, to_save=TO_SAVE_FIG,
+        fname=naming_dict["FIG_SUBS_FNAME"],
     )

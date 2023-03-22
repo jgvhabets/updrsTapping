@@ -178,6 +178,8 @@ def get_model_param_fig_names(
 
     if DATASPLIT == 'HOLDOUT':
         naming_dict['FIG_FNAME'] = 'HOLDOUT_' + naming_dict["FIG_FNAME"]
+        naming_dict['FIG_SUBS_FNAME'] = 'Subs_' + naming_dict["FIG_FNAME"]
+
 
     if testDev:
         naming_dict['FIG_FNAME'] = 'test_' + naming_dict["FIG_FNAME"]
