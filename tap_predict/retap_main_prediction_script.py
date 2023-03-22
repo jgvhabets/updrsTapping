@@ -65,6 +65,7 @@ TO_NORM = False
 TO_MASK_4 = True
 TO_MASK_0 = False
 
+TESTING = True
 
 # build names for models, params and figures to use
 naming_dict = pred_help.get_model_param_fig_names(
@@ -72,7 +73,7 @@ naming_dict = pred_help.get_model_param_fig_names(
     CLUSTER_ON_FREQ=CLUSTER_ON_FREQ, DATASPLIT=DATASPLIT,
     RECLASS_AFTER_RF=RECLASS_AFTER_RF,
     MAX_TAPS_PER_TRACE=MAX_TAPS_PER_TRACE,
-    testDev=False, MASK_0=TO_MASK_0,
+    testDev=TESTING, MASK_0=TO_MASK_0,
 )
 
 CLASS_FEATS = [
@@ -587,8 +588,9 @@ print(icc)
 
 print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prsR_p}')
 
-plot_results.plot_confMatrix_scatter(
-    y_true=y_true_all, y_pred=y_pred_all,
-    R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
-    to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
-)
+if TO_PLOT:
+    plot_results.plot_confMatrix_scatter(
+        y_true=y_true_all, y_pred=y_pred_all, plot_box=True,
+        R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
+        to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
+    )

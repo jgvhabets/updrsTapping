@@ -12,12 +12,14 @@ from tap_predict import retap_cv_models as cv_models
 from retap_utils.utils_dataManagement import find_onedrive_path
 
 
+
+
 def plot_confMatrix_scatter(
     y_true, y_pred,
     R=None, K=None, CM=None, icc=None, R_meth=None,
+    plot_scatter=True, plot_box=True,
     mc_labels=['0', '1', '2', '3-4'],
-    to_save=False, fname=None,
-    to_show=False,
+    to_save=False, fname=None, to_show=False,
 ):
     mean_pen, std_pen, _ = cv_models.get_penalties_from_conf_matr(CM)
 
@@ -25,13 +27,35 @@ def plot_confMatrix_scatter(
                             gridspec_kw={'width_ratios': [2, 1]},)
     fs=14
 
-    jitt = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
-    jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
+    if plot_scatter:
+        jitt = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
+        jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
+        axes[0].scatter(y_pred+jitt2, y_true+jitt,
+                        alpha=.2,)
+    
+    if plot_box:
+        medianprops = dict(linestyle=None, linewidth=0,)
+        meanlineprops = dict(linestyle='-', linewidth=2.5, color='firebrick')
 
-    axes[0].scatter(y_true+jitt, y_pred+jitt2,
-                    alpha=.5,)
-    axes[0].set_xlabel('True Tap Score', weight='bold', fontsize=fs)
-    axes[0].set_ylabel('Predicted Tap Score', weight='bold', fontsize=fs)
+        box_lists = [[], [], [], []]  # for boxplots, fill 4 lists with true scores per predicted score in lists
+        for pred_value, true_value in zip(y_pred, y_true):
+            box_lists[pred_value].append(true_value)  # append true-value (Y-axis) to the list of the predicted value (X-axis)
+
+        # axes[0].boxplot(box_lists, positions=range(4),
+        #                 meanline=True, showmeans=True,
+        #                 whis=.5         , medianprops=medianprops,
+        #                 meanprops=meanlineprops,)
+
+        viol_parts = axes[0].violinplot(box_lists, positions=range(4),
+                           showmeans=True, showextrema=False,
+                            showmedians=False,)
+        print(viol_parts.keys())
+        viol_parts['cmeans'].set_facecolor('firebrick')
+        viol_parts['cmeans'].set_linewidth(3)
+        viol_parts['cmeans'].set_alpha(.8)
+
+    axes[0].set_ylabel('True Tap Score', weight='bold', fontsize=fs)
+    axes[0].set_xlabel('Predicted Tap Score', weight='bold', fontsize=fs)
     axes[0].set_xticks(range(4))
     axes[0].set_xticklabels(mc_labels, weight='bold', fontsize=fs)
     axes[0].set_yticks(range(4))
@@ -124,5 +148,4 @@ def plot_confMatrix_scatter(
         )
         plt.savefig(os.path.join(path, fname), dpi=150, facecolor='w',)
         print(f'Saved Fig "{fname}" in {path}')
-    if to_show: plt.show()
-    else: plt.close()
+    plt.close()
