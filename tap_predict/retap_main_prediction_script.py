@@ -511,11 +511,12 @@ from sklearn.metrics import cohen_kappa_score as kappa
 from scipy.stats import spearmanr, pearsonr
 from pingouin import intraclass_corr
 
-y_true_all, y_pred_all = [], []
+y_true_all, y_pred_all, trace_ids_all = [], [], []
 
 for key in y_true_dict.keys():
     y_true_all.extend(y_true_dict[key])
     y_pred_all.extend(y_pred_dict[key])
+    trace_ids_all.extend(og_pred_idx[key])
 
 k_score = kappa(y_true_all, y_pred_all, weights='linear')
 R, R_p = spearmanr(y_true_all, y_pred_all)
@@ -545,12 +546,15 @@ print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prs
 
 if TO_PLOT:
     plot_results.plot_confMatrix_scatter(
-        y_true=y_true_all, y_pred=y_pred_all, plot_violin=True,
+        y_true=y_true_all, y_pred=y_pred_all, trace_ids=trace_ids_all, 
         R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
         to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
+        plot_violin=True, subs_in_holdout=subs_in_holdout,
     )
     plot_results.plot_holdout_per_sub(
-        y_true_dict, y_pred_dict, og_pred_idx,
-        subs_in_holdout, to_save=TO_SAVE_FIG,
+        y_true_list=y_true_all, y_pred_list=y_pred_all,
+        trace_ids_list=trace_ids_all,
+        subs_in_holdout=subs_in_holdout,
+        to_save=TO_SAVE_FIG,
         fname=naming_dict["FIG_SUBS_FNAME"],
     )
