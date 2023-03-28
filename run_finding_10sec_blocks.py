@@ -10,6 +10,7 @@ import json
 import os
 import sys
 from dataclasses import field, dataclass
+from typing import List
 import numpy as np
 from array import array
 from typing import Any
@@ -35,7 +36,7 @@ class rawAccData:
     joker_string: Any = None
     goal_fs: int = 250
     sub_csv_code: str = 'BER'
-    switched_sides: list = field(default_factory=list)
+    switched_sides: List = field(default_factory=list)
     unilateral_coding_list: list = field(
         default_factory=lambda: [
             'LHAND', 'RHAND',
@@ -44,6 +45,8 @@ class rawAccData:
             
         ]
     )
+    STORE_CSV=True  # NOT SAVING AT THE MOMENT
+    
 
     def __post_init__(self,):
         # IDENTIFY FILES TO PROCESS
@@ -54,6 +57,8 @@ class rawAccData:
         )
         print(f'files selected: {sel_files}')
         
+        print(self.unilateral_coding_list)
+        print(type(self.unilateral_coding_list))
         # Abort if not file found
         if len(sel_files) == 0:
             return print(f'No files found for {self.sub} {self.state}')
@@ -136,22 +141,25 @@ class rawAccData:
 
                     self.data = file_data_class  # store in class to work with in notebook
 
+                    blocks_fig_path = os.path.join(
+                        utils_dataManagement.find_onedrive_path('figures'),
+                        'block_detection'
+                    )
+
                     temp_acc, temp_ind = find_blocks.find_active_blocks(
                         acc_arr=getattr(file_data_class, acc_side),
                         fs=self.goal_fs,
                         verbose=True,
                         to_plot=True,
                         plot_orig_fname=f,
-                        figsave_dir=os.path.join(
-                            proj_dir, 'figures', 'tap_block_plots'
-                        ),
+                        figsave_dir=blocks_fig_path,
                         figsave_name=(
                             f'{self.sub}_{self.state}_'
                             f'{save_side}_blocks_detected'
                         ),
-                        to_store_csv=True,
+                        to_store_csv=self.STORE_CSV,
                         csv_dir=os.path.join(
-                            proj_dir, 'data', 'tap_block_csvs'
+                            proj_dir, 'data', 'tap_block_csvs2'
                         ),
                         csv_fname=f'{self.sub_csv_code}{self.sub}_'
                                   f'{self.state}_{save_side}',
@@ -164,9 +172,13 @@ class rawAccData:
     
 
 if __name__ == '__main__':
-    # only executes following code when called via
-    # command line, not when loaded in, in another
-    # script
+    """
+    only executes following code when called via
+    command line, not when loaded in, in another
+    script
+
+    WIN: python run_finding_10sec_blocks.py Cfg_block_finding.json
+    """
     
     uncut_path = utils_dataManagement.find_onedrive_path('uncut')
 

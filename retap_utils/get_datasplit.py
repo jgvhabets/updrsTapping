@@ -20,6 +20,7 @@ def find_dev_holdout_split(
     to_print=False,
     subs_excl=[],
     traces_excl=[],
+    EXCL_4s = False,
 ):
     """
     Main script to run to get balanced data splitting
@@ -29,6 +30,8 @@ def find_dev_holdout_split(
         - choose_random_split: predefine which datasplit
             is used to reproduce data split and results
     """
+    excl_states = [111,]
+
     print('SPLITTING DATA IN DEV AND HOLD-OUT')
     # get unique subs per center, get score-distribution in full data set
     subs_dict, og_score_distr, og_score_perc = get_population_distribution(
@@ -39,6 +42,7 @@ def find_dev_holdout_split(
         to_print=to_print,
         subs_excl=subs_excl,
         traces_excl=traces_excl,
+        EXCL_4s=EXCL_4s,
     )
     # define n samples per center for development set
     n_dev = [len(subs_dict[c]) - int(len(subs_dict[c]) * holdout_split) for c in subs_dict]
@@ -52,12 +56,21 @@ def find_dev_holdout_split(
         # if exact random_split is defined, skip all others
         if choose_random_split:
             if rand_state != choose_random_split: continue
+        if rand_state in excl_states: continue
 
         # get random split of subs per center and their scores
-        subset_subs, subset_updrs = get_random_split_and_scores(
-            feats=feats, subs_dict=subs_dict,
-            n_dev=n_dev, rand_state=rand_state,
-        )
+        if EXCL_4s:
+            subset_subs, subset_updrs, excl_fours = get_random_split_and_scores(
+                feats=feats, subs_dict=subs_dict,
+                n_dev=n_dev, rand_state=rand_state,
+                EXCL_4s=EXCL_4s,
+            )
+        else:
+            subset_subs, subset_updrs = get_random_split_and_scores(
+                feats=feats, subs_dict=subs_dict,
+                n_dev=n_dev, rand_state=rand_state,
+                EXCL_4s=EXCL_4s,
+            )
 
         # determine score-distribution of applied splitting
         split_scores = get_split_score_distr(subset_updrs)
@@ -87,7 +100,10 @@ def find_dev_holdout_split(
                     c = split_scores[split][s]
                     print(f'score {s}: # {c} ({round(c / n_split * 100)} %)')
             
-            return data_splits
+            if EXCL_4s: 
+                print(f'\tTraces excl as FOURS: {excl_fours}')
+                return data_splits, excl_fours
+            else: return data_splits
         
         else:
             continue
@@ -105,6 +121,7 @@ def get_population_distribution(
     to_print=True,
     subs_excl=[],
     traces_excl=[],
+    EXCL_4s=False,
 ):
     """
     
@@ -120,6 +137,8 @@ def get_population_distribution(
 
         if getattr(feats, trace).sub in subs_excl: continue
         if trace in traces_excl: continue
+        if EXCL_4s:
+            if getattr(feats, trace).tap_score == 4: continue
 
         subs.append(getattr(feats, trace).sub)
         all_updrs.append(getattr(feats, trace).tap_score)
@@ -151,11 +170,13 @@ def get_population_distribution(
 
 
 def get_random_split_and_scores(
-    feats, subs_dict, n_dev, rand_state
+    feats, subs_dict, n_dev, rand_state,
+    EXCL_4s=False,
 ):
     np.random.seed(rand_state)
 
     subset_subs, subset_updrs = {}, {}
+    excluded_fours = []
     
     for cen in subs_dict.keys():
         subset_subs[cen], subset_updrs[cen] = {}, {}
@@ -174,12 +195,16 @@ def get_random_split_and_scores(
 
             for trace in feats.incl_traces:
                 if getattr(feats, trace).sub in subset_subs[cen][split]:
+                    if EXCL_4s:
+                        if getattr(feats, trace).tap_score == 4:
+                            excluded_fours.append(trace)
+                            continue
                     
                     subset_updrs[cen][split].append(
                         getattr(feats, trace).tap_score
                     )
-    
-    return subset_subs, subset_updrs
+    if EXCL_4s: return subset_subs, subset_updrs, excluded_fours
+    else: return subset_subs, subset_updrs
 
 
 def get_split_score_distr(subset_updrs):

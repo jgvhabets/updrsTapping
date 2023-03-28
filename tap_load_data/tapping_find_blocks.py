@@ -342,7 +342,9 @@ def plot_blocks(
     otheraxes = [0, 1, 2]
     otheraxes.remove(mainax)
 
-    fig, ax = plt.subplots(1, 1, figsize=(24,12))
+    fontsize = 16
+
+    fig, ax = plt.subplots(1, 1, figsize=(16, 8))
     ax.plot(
         acc_arr[mainax],
         label=f'Main Axis ({mainax})',
@@ -363,29 +365,34 @@ def plot_blocks(
             x1=pos1, x2=pos2,
             color='red', alpha=.3,
             label='detected tapping blocks')
-        ax.set_xlabel(f'Samples ({fs} Hz)', fontsize=16)
-        ax.set_ylabel('Acceleration (in g in m/s/s)', fontsize=16)
-        ax.set_title(figsave_name, size=20)
+        xticks = np.arange(0, len(acc_arr[mainax]), fs*15)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels((xticks/fs).astype(int), fontsize=fontsize)
+        ax.set_xlabel(f'Time (seconds)', fontsize=fontsize)
+        ax.set_ylabel('Acceleration (in g in m/s/s)', fontsize=fontsize)
+        ax.set_title(figsave_name, size=fontsize)
 
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(
         by_label.values(), by_label.keys(),
-        frameon=False, fontsize=16,
+        frameon=False, fontsize=fontsize,
         ncol=4, loc='lower center'
     )
 
     if len(plot_orig_fname) > 1:
         plt.suptitle(
             plot_orig_fname, x=.05, y=.97,
-            ha='left', size=16,
+            ha='left', size=fontsize,
             color='gray', alpha=.8,)
 
+    plt.tick_params(axis='both', labelsize=fontsize,
+                    size=fontsize,)
     plt.tight_layout()
     plt.savefig(
         join(figsave_dir, figsave_name),
-        dpi=150, facecolor='w',
+        dpi=300, facecolor='w',
     )
     plt.close()
 

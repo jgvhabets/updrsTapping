@@ -121,7 +121,6 @@ def create_X_y_vectors(
             t for t in incl_traces
             if t not in excl_traces
         ]
-    
     # filter out traces of subs to excl (if defined)
     if len(excl_subs) > 0:
         for sub_ex in excl_subs:
@@ -181,6 +180,16 @@ def create_X_y_vectors(
                 else:   
                     X[:, ft_i] = z_score_array(X[:, ft_i], save_params=False)
     
+    # convert slopes of
+    for ft_i, f in enumerate(incl_feats):
+        if np.logical_and(f.startswith('slope'),
+                          'entr' in f or 'intraTap' in f):
+            if any(X[:, ft_i] < 0):
+                X[:, ft_i] = abs(X[:, ft_i])
+                print(f'transformed {f} into absolute values')
+        
+
+
 
     # deal with missings
     # for now set all to zero, ideally: avoid zeros in extraction

@@ -4,6 +4,7 @@
 # import function
 import os
 import numpy as np
+from pandas import Series
 import matplotlib.pyplot as plt
 from sklearn.metrics import cohen_kappa_score as kappa  
 from scipy.stats import spearmanr
@@ -19,13 +20,20 @@ def plot_confMatrix_scatter(
     R=None, K=None, CM=None, icc=None, R_meth=None,
     plot_scatter=True, plot_box=False, plot_violin=False,
     mc_labels=['0', '1', '2', '3-4'], og_pred_idx=None,
-    subs_in_holdout=None,
+    subs_in_holdout=None, add_folder=None,
     to_save=False, fname=None, to_show=False,
+    datasplit=None,
 ):
     mean_pen, std_pen, _ = cv_models.get_penalties_from_conf_matr(CM)
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 6),
-                            gridspec_kw={'width_ratios': [3, 3, 1]},)
+    if datasplit == 'HOLDOUT':
+        n_plots = 3
+        gridspecs = {'width_ratios': [3, 3, 1]}
+    else: 
+        n_plots = 2
+        gridspecs = {'width_ratios': [3, 3]}
+    fig, axes = plt.subplots(1, n_plots, figsize=(16, 6),
+                            gridspec_kw=gridspecs,)
     fs=20
 
     if plot_scatter:
@@ -38,13 +46,17 @@ def plot_confMatrix_scatter(
         
         box_lists = [[], [], [], []]  # for boxplots, fill 4 lists with true scores per predicted score in lists
         for pred_value, true_value in zip(y_pred, y_true):
-            box_lists[pred_value].append(true_value)  # append true-value (Y-axis) to the list of the predicted value (X-axis)
-
+            try:
+                box_lists[pred_value].append(true_value)  # append true-value (Y-axis) to the list of the predicted value (X-axis)
+            except IndexError:
+                print(pred_value, true_value)
+                raise ValueError('STOPPPPPPP')
         if plot_box:
             medianprops = dict(linestyle=None, linewidth=0,)
             meanlineprops = dict(linestyle='-', linewidth=2.5,
                                  color='firebrick')
-            axes[0].boxplot(box_lists, positions=range(4),
+            axes[0].boxplot(box_lists,
+                            positions=range(len(mc_labels)),
                             meanline=True, showmeans=True,
                             whis=.5, medianprops=medianprops,
                             meanprops=meanlineprops,)
@@ -109,11 +121,12 @@ def plot_confMatrix_scatter(
     #     fontsize=fs - 2,)
     
     #### PLOT AXIS WITH INDIV R's
-    axes[2] = plot_indiv_Rs_holdout(
-        ax=axes[2], y_true_list=y_true, y_pred_list=y_pred,
-        trace_ids_list=trace_ids, subs_in_holdout=subs_in_holdout,
-        fs=fs,
-    )
+    if datasplit == 'HOLDOUT':
+        axes[2] = plot_indiv_Rs_holdout(
+            ax=axes[2], y_true_list=y_true, y_pred_list=y_pred,
+            trace_ids_list=trace_ids, subs_in_holdout=subs_in_holdout,
+            fs=fs,
+        )
 
     plt.tight_layout(w_pad=.7, pad=.7)
 
@@ -122,6 +135,7 @@ def plot_confMatrix_scatter(
             find_onedrive_path('figures'),
             'prediction'
         )
+        if add_folder: path = os.path.join(path, add_folder)
         plt.savefig(os.path.join(path, fname), dpi=300, facecolor='w',)
         print(f'Saved Fig "{fname}" in {path}')
     plt.close()
@@ -131,7 +145,7 @@ from scipy.stats import pearsonr, spearmanr
 
 def plot_indiv_Rs_holdout(
     ax, y_true_list, y_pred_list, trace_ids_list,
-    subs_in_holdout, fs=14,
+    subs_in_holdout, fs=14, r_method=pearsonr,
     BER_clr='purple', DUS_clr='darkgreen',
 ):
     (sub_Rs,
@@ -140,7 +154,7 @@ def plot_indiv_Rs_holdout(
      _,
      _) = get_indiv_holdout_results(
         y_true_list, y_pred_list, trace_ids_list,
-        subs_in_holdout, 
+        subs_in_holdout, r_method=r_method,
     )
     #### plot individual R's
     ax.axhline(0, xmin=0, xmax=1, color='lightgray', alpha=.8,
@@ -204,8 +218,8 @@ def plot_indiv_Rs_holdout(
 def plot_holdout_per_sub(
     y_true_list, y_pred_list, trace_ids_list,
     subs_in_holdout, mc_labels=['0', '1', '2', '3-4'],
-    fs=14,
-    to_save=False, fname=None, to_show=False,
+    fs=14, r_method=pearsonr,
+    to_save=False, fname=None, add_folder=None, to_show=False,
 ):
     (sub_Rs,
      sub_samples,
@@ -213,7 +227,7 @@ def plot_holdout_per_sub(
      preds_per_sub,
      trues_per_sub) = get_indiv_holdout_results(
         y_true_list, y_pred_list, trace_ids_list,
-        subs_in_holdout, 
+        subs_in_holdout, r_method=r_method,
     )
 
     fig, axes = plt.subplots(int(len(subs_in_holdout) / 2), 2,
@@ -256,6 +270,7 @@ def plot_holdout_per_sub(
             find_onedrive_path('figures'),
             'prediction'
         )
+        if add_folder: path = os.path.join(path, add_folder)
         plt.savefig(os.path.join(path, fname), dpi=300, facecolor='w',)
         print(f'Saved Fig "{fname}" in {path}')
         plt.close()
@@ -265,7 +280,7 @@ def plot_holdout_per_sub(
 
 def get_indiv_holdout_results(
     y_true_list, y_pred_list, trace_ids_list,
-    subs_in_holdout, 
+    subs_in_holdout, r_method,
 ):
     sub_Rs, sub_samples, sub_ids = [], [], []
     preds_per_sub, trues_per_sub = {}, {}
@@ -282,9 +297,41 @@ def get_indiv_holdout_results(
         if len(trues_per_sub[sub]) == 1:
             R = 'N/A'
         else:
-            R, R_p = spearmanr(preds_per_sub[sub], trues_per_sub[sub])
+            R, R_p = r_method(preds_per_sub[sub], trues_per_sub[sub])
             R = round(R, 3)
         sub_Rs.append(R)
         sub_samples.append(len(trues_per_sub[sub]))
 
     return sub_Rs, sub_samples, sub_ids, preds_per_sub, trues_per_sub
+
+
+def plot_ft_importances(
+    fitted_clf, ft_names, model_name,
+    to_save=True, ADD_FIG_PATH='v2',
+):
+    # get random forest importances using mean decrease in impurity
+    # https://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html
+    importances = fitted_clf.feature_importances_
+    std = np.std([tree.feature_importances_ for tree
+                  in fitted_clf.estimators_], axis=0)
+    forest_importances = Series(importances, index=ft_names)
+
+    fig, ax = plt.subplots()
+    forest_importances.plot.bar(yerr=std, ax=ax)
+    ax.set_title("Feature importances using MDI")
+    ax.set_ylabel("Mean decrease in impurity")
+    fig.tight_layout()
+
+    if to_save:
+        fname = f'ftImportances_{model_name}'
+        path = os.path.join(
+            find_onedrive_path('figures'),
+            'prediction'
+        )
+        if ADD_FIG_PATH: path = os.path.join(path, ADD_FIG_PATH)
+        plt.savefig(os.path.join(path, fname), dpi=300, facecolor='w',)
+        print(f'Saved Fig "{fname}" in {path}')
+        plt.close()
+    else:
+        plt.show()
+    

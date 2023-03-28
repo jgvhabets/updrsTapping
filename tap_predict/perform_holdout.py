@@ -21,6 +21,7 @@ def perform_holdout(
     full_X=None, slow_X=None, fast_X=None,
     full_y=None, slow_y=None, fast_y=None,
     full_modelname=None, slow_modelname=None, fast_modelname=None,
+    PATH_ADD=None,
 ):
     """
     Performs HOLDOUT validation
@@ -45,19 +46,22 @@ def perform_holdout(
     else:
         raise ValueError('NO COMPLETE DATA AND MODEL VARIABLES GIVEN')
     
+    MODEL_PATH = join(get_local_proj_dir(), 'results', 'models')
+    if PATH_ADD: MODEL_PATH = join(MODEL_PATH, PATH_ADD)
+
     y_pred_dict, y_true_dict = {}, {}
 
     if split == 'UNCLUSTERED':
         # predict and add to dict
-        clf = load(join(get_local_proj_dir(), 'results', 'models', full_modelname))
+        clf = load(join(MODEL_PATH, full_modelname))
         y_pred_dict['holdout'] = clf.predict(full_X)
         # add true labels to dict
         y_true_dict['holdout'] = full_y
 
     elif split == 'CLUSTERED':
         # predict and add to dict
-        slow_clf = load(join(get_local_proj_dir(), 'results', 'models', slow_modelname))
-        fast_clf = load(join(get_local_proj_dir(), 'results', 'models', fast_modelname))
+        slow_clf = load(join(MODEL_PATH, slow_modelname))
+        fast_clf = load(join(MODEL_PATH, fast_modelname))
         y_pred_dict['slow'] = slow_clf.predict(slow_X)
         y_pred_dict['fast'] = fast_clf.predict(fast_X)
         # add true labels to dict
@@ -73,7 +77,8 @@ def perform_holdout(
 def holdout_reclassification(
     RECLASS_AFTER_RF: str, scores_to_reclass: list,
     recl_label, og_pred_idx, y_pred_dict, y_true_dict,
-    RECLASS_FEATS, CLASS_FEATS, X_holdout, ids_holdout, model_name
+    RECLASS_FEATS, CLASS_FEATS, X_holdout, ids_holdout,
+    model_name, PATH_ADD=None,
 ):
     """
     Performs the reclassification of labels after
@@ -115,7 +120,8 @@ def holdout_reclassification(
                      f'_reclass{RECLASS_AFTER_RF.upper()}'
                      f'{recl_label}.P')
     temp_y_pred, _ = perform_holdout(full_X=reclass_X, full_y=new_y_true_dict['reclass'],
-                                     full_modelname=reclass_model)
+                                     full_modelname=reclass_model,
+                                     PATH_ADD=PATH_ADD,)
     new_y_pred_dict['reclass'] = temp_y_pred['holdout']
     # # create new y_dicts after all reclass categories
     # y_pred_dict, y_true_dict = {}, {}

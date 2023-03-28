@@ -46,6 +46,10 @@ def classify_based_on_nTaps(
 
     for t in list(compress(ftClass.incl_traces, cutoff_sel)):
 
+        # build in escape for traces with few taps, but large amplitudes
+        if sum(getattr(ftClass, t).fts.raise_velocity) > 100:
+            continue
+
         selected_traces.append(t)
         true_scores.append(getattr(ftClass, t).tap_score)
 

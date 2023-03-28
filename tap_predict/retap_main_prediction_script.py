@@ -33,7 +33,7 @@ import tap_plotting.plot_pred_results as plot_results
 
 ### SET VARIABLES (load later from json) ###
 # define features to use
-FT_CLASS_DATE = '20230228'
+FT_CLASS_DATE = '20230228'  # validated features
 MAX_TAPS_PER_TRACE = None  # should be None, 10, 15
 # define modeling
 DATASPLIT = 'HOLDOUT'  # should be CROSSVAL or HOLDOUT
@@ -45,24 +45,31 @@ RECLASS_SETTINGS = {'scores': [[1,], [2,]],
                     'labels': ['1', '2']}
 N_RANDOM_SPLIT = 41  # 01.03.23, default None if split has to be found
 # if holdout, choose model
-# USE_MODEL_DATE = '20230303' # DGKN version
-USE_MODEL_DATE = '20230321' # changed clustering feats and reclassifying
+# USE_MODEL_DATE = '20230321' # changed clustering feats and reclassifying
+USE_MODEL_DATE = '20230328' # test leaving out 4 trace, abs slopes (ITI, entropy)
 
 # define saving or plotting
 SAVE_TRAINED_MODEL = True
 TO_PLOT = True
 TO_SAVE_FIG = True
+ADD_FIG_PATH = 'v2'  # None saves figs in figures/prediction
+# v2: excl FOURS; v3: EXCL-FOURS and without fewTAps
 
 # std settings and exclusions
 SUBS_EXCL = ['BER028']  # too many missing acc-data
-TRACES_EXCL = ['DUS006_M0S0_L_1']  # no score/video
+TRACES_EXCL = [
+    'DUS006_M0S0_L_1',  # no score/video
+    'DUS017_M1S0_L_1', 'DUS017_M1S1_L_1',  # corrupt acc-axis
+    # 'BER023_M1S0_R_2',  # tap score 4
+]
 
 SCORE_FEW_TAPS_3 = True
 CUTOFF_TAPS_3 = 9
 
 TO_ZSCORE = True
 TO_NORM = False
-TO_MASK_4 = True
+EXCL_4 = True
+TO_MASK_4 = False
 TO_MASK_0 = False
 
 TESTING = False
@@ -142,8 +149,12 @@ datasplit_subs = get_split.find_dev_holdout_split(
     feats=FT_CLASS,
     subs_excl=SUBS_EXCL,
     traces_excl=TRACES_EXCL,
-    choose_random_split=N_RANDOM_SPLIT
+    # choose_random_split=N_RANDOM_SPLIT,
+    EXCL_4s=EXCL_4,
 )
+if isinstance(datasplit_subs, tuple) and EXCL_4:
+    datasplit_subs, excl_fours = datasplit_subs
+    SUBS_EXCL.extend(excl_fours)  # add the found traces with FOURS for EXCL
 
 if DATASPLIT == 'CROSSVAL':
     datasplit_subs_incl = datasplit_subs['dev']
@@ -153,14 +164,15 @@ if DATASPLIT == 'CROSSVAL':
 elif DATASPLIT == 'HOLDOUT':
     datasplit_subs_incl = datasplit_subs['hout']
     datasplit_subs_excl = datasplit_subs['dev']
-    params_df = read_csv(join(utils_dataManagement.get_local_proj_dir(),
-                              'results', 'models', naming_dict["STD_PARAMS"]),
+    params_path = join(utils_dataManagement.get_local_proj_dir(),
+                       'results', 'models',)
+    if ADD_FIG_PATH: params_path = join(params_path, ADD_FIG_PATH)
+    params_df = read_csv(join(params_path, naming_dict["STD_PARAMS"]),
                          header=0, index_col=0,)
     if CLUSTER_ON_FREQ:
-        cluster_params_df = read_csv(join(utils_dataManagement.get_local_proj_dir(),
-                                        'results', 'models',
-                                        naming_dict["CLUSTER_STD_PARAMS"]),
-                                    header=0, index_col=0,)
+        cluster_params_df = read_csv(
+            join(params_path, naming_dict["CLUSTER_STD_PARAMS"]),
+            header=0, index_col=0,)
 else:
     raise ValueError('DATASPLIT has to be CROSSVAL or HOLDOUT')
 
@@ -245,9 +257,13 @@ if CLUSTER_ON_FREQ:
     )
 
 if DATASPLIT == 'HOLDOUT':
-    subs_in_holdout = list(trace_ids_fewTaps) + list(pred_data.ids)
+    subs_in_holdout = list(pred_data.ids)
+    if SCORE_FEW_TAPS_3:
+        subs_in_holdout.extend(list(trace_ids_fewTaps))
     subs_in_holdout = [t[:6] for t in subs_in_holdout]
     subs_in_holdout = list(set(subs_in_holdout))
+else:
+    subs_in_holdout = []
 
 #######################
 # CLASSIFICATION PART #
@@ -328,7 +344,8 @@ elif DATASPLIT == 'HOLDOUT':
     if not CLUSTER_ON_FREQ:
         y_pred_dict, y_true_dict = perform_holdout(
             full_X=pred_data.X, full_y=pred_data.y,
-            full_modelname=naming_dict['MODEL_NAME']
+            full_modelname=naming_dict['MODEL_NAME'],
+            PATH_ADD=ADD_FIG_PATH,
         )
         og_pred_idx = {}
         og_pred_idx['holdout'] = pred_data.ids  # add for reclassification or tracing back original subjects
@@ -359,7 +376,8 @@ elif DATASPLIT == 'HOLDOUT':
                     y_true_dict=y_true_dict,
                     RECLASS_FEATS=RECLASS_FEATS,
                     CLASS_FEATS=CLASS_FEATS,
-                    model_name=naming_dict['MODEL_NAME']
+                    model_name=naming_dict['MODEL_NAME'],
+                    PATH_ADD=ADD_FIG_PATH,
                 )
 
 
@@ -388,6 +406,7 @@ elif DATASPLIT == 'HOLDOUT':
             fast_X=fast_pred_data.X, fast_y=fast_pred_data.y,
             slow_modelname=naming_dict['MODEL_NAME_SLOW'],
             fast_modelname=naming_dict['MODEL_NAME_FAST'],
+            PATH_ADD=ADD_FIG_PATH,
         )
 
 # add traces classified on few-taps as separate dict fold
@@ -402,27 +421,25 @@ if SCORE_FEW_TAPS_3:
 ###################################
 
 if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
-    
+    # define directory to save models
+    MODEL_PATH = join(utils_dataManagement.get_local_proj_dir(),
+                      'results', 'models')
+    if ADD_FIG_PATH: MODEL_PATH = join(MODEL_PATH, ADD_FIG_PATH)
+
     # save std parameters for classification
     fname = f'{today}_STD_params'
     if TO_MASK_0: fname += '_mask0' 
     if MAX_TAPS_PER_TRACE: fname += f'_{MAX_TAPS_PER_TRACE}taps'
     else: fname += '_alltaps'
-    STD_params.to_csv(
-        join(utils_dataManagement.get_local_proj_dir(), 'results', 'models',
-             f'{fname}.csv'),
-        header=True, index=True
-    )
+    STD_params.to_csv(join(MODEL_PATH, f'{fname}.csv'),
+                      header=True, index=True)
     # save std parameters for clustering
     if CLUSTER_ON_FREQ:
         fname = f'{today}_STD_params_cluster'
         if MAX_TAPS_PER_TRACE: fname += f'_{MAX_TAPS_PER_TRACE}taps'
         else: fname += '_alltaps'
-        STD_params_cluster.to_csv(
-            join(utils_dataManagement.get_local_proj_dir(), 'results', 'models',
-                 f'{fname}.csv'),
-            header=True, index=True
-        )
+        STD_params_cluster.to_csv(join(MODEL_PATH, f'{fname}.csv'),
+                                  header=True, index=True)
 
     # save model trained on FULL crossvalidation data
     elif not CLUSTER_ON_FREQ:
@@ -434,8 +451,10 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 
         saveload_models.save_model_in_cv(
             clf=CLF_CHOICE, X_CV=pred_data.X, y_CV=pred_data.y,
-            # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
+            path=MODEL_PATH, ADD_FIG_PATH=ADD_FIG_PATH,
             model_fname=model_fname,
+            to_plot_ft_importances=True,
+            ft_names=CLASS_FEATS,
         )
 
         # save reclassing models per fold / score-category [0: 0-1, 1: 2, 2: 3]
@@ -453,7 +472,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
                 saveload_models.save_model_in_cv(
                     clf=RECLASS_AFTER_RF,
                     X_CV=reclass_X, y_CV=reclass_y,
-                    # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
+                    path=MODEL_PATH, ADD_FIG_PATH=ADD_FIG_PATH,
                     model_fname=reclass_modelname,
                 )
 
@@ -468,7 +487,7 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
         
             saveload_models.save_model_in_cv(
                 clf=CLF_CHOICE, X_CV=cluster_data.X, y_CV=cluster_data.y,
-                # path=utils_dataManagement.find_onedrive_path('models'),  # saves default to local project folder
+                path=MODEL_PATH, ADD_FIG_PATH=ADD_FIG_PATH,
                 model_fname=model_fname,
             )
 
@@ -476,7 +495,10 @@ if SAVE_TRAINED_MODEL and DATASPLIT == 'CROSSVAL':
 # SAVING RESULTS #
 ##################
 
-if TO_MASK_4:
+if EXCL_4:
+    if not TO_MASK_0: mc_labels = ['0', '1', '2', '3']
+    else: ['0-1', '1', '2', '3']
+elif TO_MASK_4:
     if TO_MASK_0: mc_labels = ['0-1', '1', '2', '3-4']
     else: mc_labels = ['0', '1', '2', '3-4']
 else: mc_labels = ['0', '1', '2', '3', '4']
@@ -541,6 +563,9 @@ icc_score = icc.iloc[5]['ICC']  # 5 row is two-way, mixed effect, k-raters
 print(icc)
 
 print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prsR_p}')
+mean_pen, std_pen, _ = cv_models.get_penalties_from_conf_matr(cm)
+print(f'Mean Prediction Error (UPDRS tap score): {round(mean_pen, 2)}'
+      f' (sd: {round(std_pen, 2)})')
 
 
 
@@ -550,11 +575,16 @@ if TO_PLOT:
         R=pearsonR, K=k_score, CM=cm, icc=icc_score, R_meth='Pearson',
         to_save=TO_SAVE_FIG, fname=naming_dict["FIG_FNAME"],
         plot_violin=True, subs_in_holdout=subs_in_holdout,
+        mc_labels=mc_labels,
+        add_folder=ADD_FIG_PATH,
+        datasplit=DATASPLIT,
     )
-    plot_results.plot_holdout_per_sub(
-        y_true_list=y_true_all, y_pred_list=y_pred_all,
-        trace_ids_list=trace_ids_all,
-        subs_in_holdout=subs_in_holdout,
-        to_save=TO_SAVE_FIG,
-        fname=naming_dict["FIG_SUBS_FNAME"],
-    )
+    if DATASPLIT == 'HOLDOUT':
+        plot_results.plot_holdout_per_sub(
+            y_true_list=y_true_all, y_pred_list=y_pred_all,
+            trace_ids_list=trace_ids_all,
+            subs_in_holdout=subs_in_holdout,
+            to_save=TO_SAVE_FIG,
+            fname=naming_dict["FIG_SUBS_FNAME"],
+            add_folder=ADD_FIG_PATH,
+        )
