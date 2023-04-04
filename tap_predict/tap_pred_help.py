@@ -8,8 +8,10 @@ Helpers functions in classification workflow
 import numpy as np
 import pandas as pd
 from itertools import compress
+from os.path import join
 
 import tap_predict.tap_pred_prepare as pred_prep
+from retap_utils.utils_dataManagement import find_onedrive_path
 
 from numpy.random import seed
 from sklearn.model_selection import StratifiedKFold
@@ -271,3 +273,134 @@ def perform_reclassification(
     # new_y_pred_dict['reclass'] = reclassed_y_pred
 
     return new_y_true_dict, new_y_pred_dict, new_idx_dict, new_idx_dict['reclass']
+
+
+from pingouin import intraclass_corr
+from sklearn.metrics import cohen_kappa_score as kappa
+
+def calculate_ICC(y_true, y_pred):
+    # convert scores to lists
+    if not isinstance(y_true, list): y_true = list(y_true)
+    if not isinstance(y_pred, list): y_pred = list(y_pred)
+    
+    icc_scores = y_true + y_pred
+    icc_judges = ['clin'] * len(y_true) + ['model'] * len(y_pred)
+    icc_ids = [str(i) for i in range(len(y_true))] * 2
+    try:
+        icc_dat = pd.DataFrame(np.array([icc_ids, icc_judges, icc_scores]),
+                        columns=['IDs', 'Judges', 'Scores'])
+    except:
+        # transpose ICC data
+        icc_dat = pd.DataFrame(np.array([icc_ids, icc_judges, icc_scores]).T,
+                        columns=['IDs', 'Judges', 'Scores'])
+        
+    icc = intraclass_corr(data=icc_dat, targets='IDs', raters='Judges',
+                            ratings='Scores')
+    
+    return icc
+
+
+def perform_permutations(
+    y_true, icc_value, pred_error_value, k_value,
+    file_name, model_name, n_permutations = 1000,
+):
+    print(f'\tstart permutations for {model_name}, n={n_permutations}')
+    perm_file = join(find_onedrive_path('results'), file_name + '_chance.txt')
+
+    y_true = np.array(y_true)
+
+    penalties_full_chance = []
+    icc_full_chance = []
+    k_chance = []
+
+    r_states = np.linspace(0, n_permutations*3, n_permutations).astype(int)
+
+    for r_seed in r_states:
+        # create random predicted labels
+        np.random.seed(r_seed)
+        y_random = np.random.randint(0, 3 + 1, size=len(y_true))
+        # calculate mean prediction error
+        diffs = abs(y_true - y_random)
+        penalties_full_chance.append(diffs.mean())
+        # calculate ICC-3k
+        icc = calculate_ICC(y_true, y_random)
+        icc = icc.iloc[5]['ICC']
+        icc_full_chance.append(icc)
+        # calculate kappa Cohen's
+        k = kappa(y_true, y_random, weights='linear')
+        k_chance.append(k)
+
+    icc_p = sum(np.array(icc_full_chance) > icc_value) / len(icc_full_chance)
+    pred_error_p = sum(np.array(penalties_full_chance) < pred_error_value) / len(penalties_full_chance)
+    k_p = sum(np.array(k_chance) > k_value) / len(k_chance)
+
+    with open(perm_file, mode='wt') as f:
+        f.write(
+            f'Model: {model_name}'
+            f'chance level PERMUTATIONS (n={n_permutations})\n'
+            '##############################################\n\n'
+            'Mean Penalty WITHOUT distribution'
+            f' knowledge: {round(np.mean(penalties_full_chance), 3)}'
+            f'\nP-value ICC-3k ({icc_value}: {icc_p})'
+            f'\nP-value Cohens kappa ({k_value}: {k_p})'
+            f'\nP-value pred-error ({pred_error_value}: {pred_error_p})'
+            '\n\nPenalty alpha .01 cut off without distribution'
+            f' knowledge: {round(np.percentile(penalties_full_chance, 1), 5)}'
+            '\nPenalty alpha .001 cut off without distribution'
+            f' knowledge: {round(np.percentile(penalties_full_chance, .1), 5)}'
+            '\n\nMean ICC-3k without distribution'
+            f' knowledge: {round(np.mean(icc_full_chance), 3)}'
+            '\nICC-3k alpha .01 cut off without distribution'
+            f' knowledge: {round(np.percentile(icc_full_chance, 99), 5)}'
+            '\nICC-3k alpha .001 cut off without distribution'
+            f' knowledge: {round(np.percentile(icc_full_chance, 99.9), 5)}')
+
+    ### WITH same distribution
+    perm_file = join(find_onedrive_path('results'), file_name + '_chanceAndDistr.txt')
+
+    penalties_full_chance = []
+    icc_full_chance = []
+    k_chance = []
+
+    r_states = np.linspace(0, n_permutations*3, n_permutations).astype(int)
+
+    for r_seed in r_states:
+        y_random = y_true.copy()
+        # create random predicted labels
+        np.random.shuffle(y_random)
+        # calculate mean prediction error
+        diffs = abs(y_true - y_random)
+        penalties_full_chance.append(diffs.mean())
+        # calculate ICC-3k
+        icc = calculate_ICC(y_true, y_random)
+        icc = icc.iloc[5]['ICC']
+        icc_full_chance.append(icc)
+        # calculate kappa Cohen's
+        k = kappa(y_true, y_random, weights='linear')
+        k_chance.append(k)
+
+    icc_p = sum(np.array(icc_full_chance) > icc_value) / len(icc_full_chance)
+    pred_error_p = sum(np.array(penalties_full_chance) < pred_error_value) / len(penalties_full_chance)
+    k_p = sum(np.array(k_chance) > k_value) / len(k_chance)
+
+    with open(perm_file, mode='wt') as f:
+        f.write(
+            '\n\n\n##############################################\n\n'
+            f'Model: {model_name}'
+            f'chance level PERMUTATIONS (WITH DISTRIBUTION) (n={n_permutations})\n'
+            '##############################################\n\n'
+            'Mean Penalty WITH distribution'
+            f' knowledge: {round(np.mean(penalties_full_chance), 3)}'
+            f'\nP-value ICC-3k ({icc_value}: {icc_p})'
+            f'\nP-value pred-error ({pred_error_value}: {pred_error_p})'
+            f'\nP-value Cohens kappa ({k_value}: {k_p})'
+            '\n\nPenalty alpha .01 cut off without distribution'
+            f' knowledge: {round(np.percentile(penalties_full_chance, 1), 5)}'
+            '\nPenalty alpha .001 cut off without distribution'
+            f' knowledge: {round(np.percentile(penalties_full_chance, .1), 5)}'
+            '\n\nMean ICC-3k without distribution'
+            f' knowledge: {round(np.mean(icc_full_chance), 3)}'
+            '\nICC-3k alpha .01 cut off without distribution'
+            f' knowledge: {round(np.percentile(icc_full_chance, 99), 5)}'
+            '\nICC-3k alpha .001 cut off without distribution'
+            f' knowledge: {round(np.percentile(icc_full_chance, 99.9), 5)}')

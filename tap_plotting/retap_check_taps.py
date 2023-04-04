@@ -20,13 +20,13 @@ from retap_utils.utils_dataManagement import get_local_proj_dir, load_class_pick
 # from tap_load_data.tapping_preprocess import find_main_axis
 
 def plot_detected_taps(
-    ftClass,
+    ftClass, fontsize=16,
 ):
 
     savepath = join(
         get_local_proj_dir(),
         'figures',
-        'tap_find_check', 'v3'
+        'tap_find_check', 'submission'
     )
     if not exists(savepath): makedirs(savepath)
 
@@ -39,7 +39,7 @@ def plot_detected_taps(
 
         x_samples = np.arange(accsig.shape[1])
 
-        plt.plot(accsig.T, alpha=.3, label=['x', 'y', 'z'])
+        plt.plot(accsig.T, alpha=.3, label=['X', 'Y', 'Z'])
 
         plt.scatter(taps, [3] * len(taps), label='tap-starts')
 
@@ -54,21 +54,23 @@ def plot_detected_taps(
         # plt.scatter(svmimpacts, [3.5] * len(svmimpacts))
         
 
-        plt.ylabel('Acceleration (g)')
-        plt.xlabel('Time (s)')
+        plt.ylabel('Acceleration (g)', fontsize=16,)
+        plt.xlabel('Time (sec)', fontsize=16,)
 
         xtick_res_sec = 2 # resolution of xtick labels
         plt.xticks(
             x_samples[::250 * xtick_res_sec],
             labels=x_samples[::250 * xtick_res_sec] / 250)  # divide by fs for second-convertion
 
-        plt.legend(loc='lower center', ncol=4)
+        # plt.legend(
+        #     loc='lower center',ncol=4)
 
         plt.title(f'{trace}   ({testrun.tap_score})')
 
         plt.savefig(
-            join(savepath, f'{trace}_tap_check'),
-            dpi=150, facecolor='w',
+            join(savepath, f'{trace}_tap_check.pdf'),
+            format='pdf',
+            dpi=450, facecolor='w',
         )
         plt.close()
 

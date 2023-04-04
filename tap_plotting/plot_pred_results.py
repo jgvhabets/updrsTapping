@@ -19,7 +19,7 @@ def plot_confMatrix_scatter(
     y_true, y_pred, trace_ids,
     R=None, K=None, CM=None, icc=None, R_meth=None,
     plot_scatter=True, plot_box=False, plot_violin=False,
-    mc_labels=['0', '1', '2', '3-4'], og_pred_idx=None,
+    mc_labels=['0', '1', '2', '3'], og_pred_idx=None,
     subs_in_holdout=None, add_folder=None,
     to_save=False, fname=None, to_show=False,
     datasplit=None,
@@ -105,7 +105,7 @@ def plot_confMatrix_scatter(
         for j in range(len(mc_labels)):
             value = CM.values[i, j]
             if value > 30: txt_col ='k'
-            elif value > 15 and np.max(CM.values) < 50: txt_col = 'gray'
+            # elif value > 15 and np.max(CM.values) < 50: txt_col = 'gray'
             else: txt_col = 'w'
             text = axes[1].text(
                 j, i, value, weight='bold', fontsize=fs,
@@ -217,7 +217,7 @@ def plot_indiv_Rs_holdout(
 
 def plot_holdout_per_sub(
     y_true_list, y_pred_list, trace_ids_list,
-    subs_in_holdout, mc_labels=['0', '1', '2', '3-4'],
+    subs_in_holdout, mc_labels=['0', '1', '2', '3'],
     fs=14, r_method=pearsonr,
     to_save=False, fname=None, add_folder=None, to_show=False,
 ):
@@ -316,10 +316,28 @@ def plot_ft_importances(
                   in fitted_clf.estimators_], axis=0)
     forest_importances = Series(importances, index=ft_names)
 
+    plot_ft_labels = [
+        'normed RMS (trace)',
+        'entropy (trace)',
+        'jerkiness (trace)',
+        'ITI (coefvar)',
+        'ITI (decrement)',
+        'tap-RMS (mean)',
+        'tap-RMS (coefvar)',
+        'impact-RMS (mean)',
+        'impact-RMS (coefvar)',
+        'impact-RMS (decrement)',
+        'raise-velocity (mean)',
+        'raise-velocity (coefvar)',
+        'tap-entropy (coefvar)',
+        'tap-entropy (decrement)'
+    ]
+
     fig, ax = plt.subplots()
     forest_importances.plot.bar(yerr=std, ax=ax)
     ax.set_title("Feature importances using MDI")
-    ax.set_ylabel("Mean decrease in impurity")
+    ax.set_xticklabels(plot_ft_labels)
+    ax.set_ylabel("Mean decrease in impurity (a.u.)")
     fig.tight_layout()
 
     if to_save:
@@ -334,4 +352,4 @@ def plot_ft_importances(
         plt.close()
     else:
         plt.show()
-    
+

@@ -34,7 +34,7 @@ import tap_plotting.plot_pred_results as plot_results
 ### SET VARIABLES (load later from json) ###
 # define features to use
 FT_CLASS_DATE = '20230228'  # validated features
-MAX_TAPS_PER_TRACE = None  # should be None, 10, 15
+MAX_TAPS_PER_TRACE = 15  # should be None, 10, 15
 # define modeling
 DATASPLIT = 'HOLDOUT'  # should be CROSSVAL or HOLDOUT
 CLF_CHOICE = 'RF'
@@ -43,20 +43,22 @@ N_CLUSTERS_FREQ = 2
 RECLASS_AFTER_RF = None   # RF, LOGREG, SVC or None
 RECLASS_SETTINGS = {'scores': [[1,], [2,]],
                     'labels': ['1', '2']}
-N_RANDOM_SPLIT = 41  # 01.03.23, default None if split has to be found
-# if holdout, choose model
+N_RANDOM_SPLIT = 125  # (v1: 41, after discard of corrupt axes: 125, None: find)
+
 # USE_MODEL_DATE = '20230321' # changed clustering feats and reclassifying
 USE_MODEL_DATE = '20230328' # test leaving out 4 trace, abs slopes (ITI, entropy)
+USE_MODEL_DATE = '20230404'
 
 # define saving or plotting
 SAVE_TRAINED_MODEL = True
 TO_PLOT = True
 TO_SAVE_FIG = True
+TO_PERFORM_PERM = True
 ADD_FIG_PATH = 'v2'  # None saves figs in figures/prediction
-# v2: excl FOURS; v3: EXCL-FOURS and without fewTAps
+# v2: excl FOURS; v3: EXCL-FOURS and without fewTaps
 
 # std settings and exclusions
-SUBS_EXCL = ['BER028']  # too many missing acc-data
+SUBS_EXCL = ['BER028', ]  # too many missing acc-data
 TRACES_EXCL = [
     'DUS006_M0S0_L_1',  # no score/video
     'DUS017_M1S0_L_1', 'DUS017_M1S1_L_1',  # corrupt acc-axis
@@ -125,6 +127,7 @@ mm = str(dt.date.today().month).zfill(2)
 yyyy = dt.date.today().year
 today = f'{yyyy}{mm}{dd}'
 naming_dict['FIG_FNAME'] += f'_{today}'
+naming_dict['FIG_SUBS_FNAME'] += f'_{today}'
 
 
 #########################
@@ -149,9 +152,10 @@ datasplit_subs = get_split.find_dev_holdout_split(
     feats=FT_CLASS,
     subs_excl=SUBS_EXCL,
     traces_excl=TRACES_EXCL,
-    # choose_random_split=N_RANDOM_SPLIT,
+    choose_random_split=N_RANDOM_SPLIT,
     EXCL_4s=EXCL_4,
 )
+# in case fours are excluded, the list with exclusion are returned
 if isinstance(datasplit_subs, tuple) and EXCL_4:
     datasplit_subs, excl_fours = datasplit_subs
     SUBS_EXCL.extend(excl_fours)  # add the found traces with FOURS for EXCL
@@ -546,28 +550,53 @@ pearsonR, prsR_p = pearsonr(y_true_all, y_pred_all)
 
 
 # calculate ICC
-icc_scores = y_true_all + y_pred_all
-icc_judges = ['clin'] * len(y_true_all) + ['model'] * len(y_pred_all)
-icc_ids = [str(i) for i in range(len(y_true_all))] * 2
-try:
-    icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]),
-                    columns=['IDs', 'Judges', 'Scores'])
-except:
-    icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]).T,
-                    columns=['IDs', 'Judges', 'Scores'])
-    print('transposed ICC dat')
+icc = pred_help.calculate_ICC(y_true=y_true_all, y_pred=y_pred_all)
+# icc_scores = y_true_all + y_pred_all
+# icc_judges = ['clin'] * len(y_true_all) + ['model'] * len(y_pred_all)
+# icc_ids = [str(i) for i in range(len(y_true_all))] * 2
+# try:
+#     icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]),
+#                     columns=['IDs', 'Judges', 'Scores'])
+# except:
+#     icc_dat = DataFrame(array([icc_ids, icc_judges, icc_scores]).T,
+#                     columns=['IDs', 'Judges', 'Scores'])
+#     print('transposed ICC dat')
 
-icc = intraclass_corr(data=icc_dat, targets='IDs', raters='Judges',
-                         ratings='Scores')
+# icc = intraclass_corr(data=icc_dat, targets='IDs', raters='Judges',
+#                          ratings='Scores')
+
 icc_score = icc.iloc[5]['ICC']  # 5 row is two-way, mixed effect, k-raters
-print(icc)
 
+print(icc)
 print(f'Kappa {k_score}, Spearman R: {R}, p={R_p}, Pearson R: {pearsonR}, p={prsR_p}')
 mean_pen, std_pen, _ = cv_models.get_penalties_from_conf_matr(cm)
 print(f'Mean Prediction Error (UPDRS tap score): {round(mean_pen, 2)}'
       f' (sd: {round(std_pen, 2)})')
 
+# store results in text file
+txt_path = join(utils_dataManagement.find_onedrive_path('figures'), 'prediction')
+if isinstance(ADD_FIG_PATH, str): txt_path = join(txt_path, ADD_FIG_PATH)
+txt_file = join(txt_path, f'{naming_dict["FIG_FNAME"]}.txt')
 
+with open(txt_file, mode='wt') as f:
+    f.write(f'#################################################\n')
+    f.write(f'## Results for: {naming_dict["FIG_FNAME"]} ##\n')
+    f.write(f'#################################################\n\n')
+    f.write(f'Model used: {naming_dict["MODEL_NAME"]}\n\n')
+    f.write(f'Features used: {FT_CLASS_DATE}\n\n')
+    f.write(f'\tIntraclass-Correlation-Coefficient\n{icc}\n')
+    f.write(f'\tKappa {k_score},\n\tSpearman R: {R}, p={R_p},'
+            f'\n\tPearson R: {pearsonR}, p={prsR_p}\n\t')
+    f.write('Mean Prediction Error (UPDRS tap score): '
+            f'{round(mean_pen, 2)} (sd: {round(std_pen, 2)})')
+f.close()
+
+# store permutations
+if TO_PERFORM_PERM:
+    pred_help.perform_permutations(y_true_all, icc_value=icc_score,
+                                   k_value=k_score, pred_error_value=mean_pen,
+                                   file_name=f'perms_{naming_dict["FIG_FNAME"]}',
+                                   model_name=naming_dict["MODEL_NAME"])
 
 if TO_PLOT:
     plot_results.plot_confMatrix_scatter(
