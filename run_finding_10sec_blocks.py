@@ -143,7 +143,7 @@ class rawAccData:
 
                     blocks_fig_path = os.path.join(
                         utils_dataManagement.find_onedrive_path('figures'),
-                        'block_detection'
+                        'block_detection_submission'
                     )
 
                     temp_acc, temp_ind = find_blocks.find_active_blocks(

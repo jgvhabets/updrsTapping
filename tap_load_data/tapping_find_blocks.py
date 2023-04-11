@@ -345,23 +345,25 @@ def plot_blocks(
     fontsize = 16
 
     fig, ax = plt.subplots(1, 1, figsize=(16, 8))
-    ax.plot(
-        acc_arr[mainax],
-        label=f'Main Axis ({mainax})',
-        alpha=.8,
-    )
-    for axis in otheraxes:
-        ax.plot(
-            acc_arr[axis],
-            label=f'Axis ({axis})',
-            alpha=.4,
-        )
+    # plot for manuscript figure
+    if np.logical_or(figsave_name.startswith('056_M1S0_L'),
+                     figsave_name.startswith('026_M0S0_R')):        
+        ax.plot(acc_arr[0], c='blue', label='X', alpha=.8,)
+        ax.plot(acc_arr[1], c='orange', label='Y', alpha=.8,)
+        ax.plot(acc_arr[2], c='green', label='Z', alpha=.8,)
+    else:
+        # orignal plotting
+        ax.plot(acc_arr[mainax], alpha=.8,
+                label=f'Main Axis ({mainax})',)
+        for axis in otheraxes:
+            ax.plot(acc_arr[axis], alpha=.4,
+                    label=f'Axis ({axis})',)
 
     for pos1, pos2 in zip(
         block_indices['start'], block_indices['end']
     ):
         ax.fill_betweenx(
-            y=np.arange(5.5,6.1,.5),
+            y=np.arange(2.5,3.1,.5),
             x1=pos1, x2=pos2,
             color='red', alpha=.3,
             label='detected tapping blocks')
@@ -369,8 +371,24 @@ def plot_blocks(
         ax.set_xticks(xticks)
         ax.set_xticklabels((xticks/fs).astype(int), fontsize=fontsize)
         ax.set_xlabel(f'Time (seconds)', fontsize=fontsize)
-        ax.set_ylabel('Acceleration (in g in m/s/s)', fontsize=fontsize)
+        ax.set_ylabel('Acceleration (g)', fontsize=fontsize)
         ax.set_title(figsave_name, size=fontsize)
+        # manuscript plot
+        if np.logical_or(figsave_name.startswith('056_M1S0_L'),
+                     figsave_name.startswith('026_M0S0_R')):      
+            if figsave_name.startswith('026_M0S0_R'):
+                x_start = block_indices['start'][0] - (fs * 10)
+                x_stop = block_indices['end'][-1] + (fs * 10)
+            elif figsave_name.startswith('056_M1S0_L'):
+                x_start = block_indices['start'][2] - (fs * 10)
+                x_stop = block_indices['end'][-1] + (fs * 10)
+            ax.set_xlim(x_start, x_stop)
+            xticks = np.arange(x_start, x_stop, fs*10)
+            ax.set_xticks(xticks)
+            ticklabels = (xticks/fs) - (x_start/fs)
+            ax.set_xticklabels(ticklabels.astype(int), fontsize=fontsize)
+            ax.set_ylim(-2, 3.3)
+
 
 
     handles, labels = plt.gca().get_legend_handles_labels()
@@ -391,8 +409,9 @@ def plot_blocks(
                     size=fontsize,)
     plt.tight_layout()
     plt.savefig(
-        join(figsave_dir, figsave_name),
-        dpi=300, facecolor='w',
+        join(figsave_dir, figsave_name + '.pdf'),
+        format='pdf',
+        dpi=450, facecolor='w',
     )
     plt.close()
 
