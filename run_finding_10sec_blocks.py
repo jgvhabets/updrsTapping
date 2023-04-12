@@ -182,47 +182,36 @@ if __name__ == '__main__':
     
     uncut_path = utils_dataManagement.find_onedrive_path('uncut')
 
-    # check for given subs and states
-    if len(sys.argv) == 2:
+    # check for given Cfg-file
+    if len(sys.argv) == 2: json_filename = sys.argv[1]
+    elif len(sys.argv) == 1: json_filename = 'Cfg_block_finding.json'
 
-        with open(sys.argv[1], 'r') as json_data:
+    # load configurations
+    with open(json_filename, 'r') as json_data:
+        cfg = json.load(json_data)
 
-            cfg = json.load(json_data)
-
-        if cfg['subs_states'] == 'ALL':
-            # get unique sub numbers in UNCUT
-            subs = utils_dataManagement.get_unique_subs(uncut_path)
-
-        else:
-            # get defined subs
-            subs = cfg['subs_states']  # subs given as list instead of dict .keys()
-        
-        for sub in subs:
-
-            print(f'\nSTART SUB {sub}')
-
-            for state in ['M0S0', 'M0S1', 'M1S0', 'M1S1']:
-                print(f'\n\tSTART {state}')
-                try:
-                    rawAccData(
-                        sub=sub,
-                        state=state,
-                        uncut_path=uncut_path,
-                        switched_sides=cfg['side_switch'],
-                    )
-                except FileNotFoundError:
-                    print(f'\t{state} not present for sub{sub}')
+    # find subs to include
+    if cfg['subs_states'] == 'ALL':
+        # get unique sub numbers in UNCUT
+        subs = utils_dataManagement.get_unique_subs(uncut_path)
+    else:
+        # get defined subs
+        subs = cfg['subs_states']  # subs given as list instead of dict .keys()
     
-    elif len(sys.argv) == 3:
+    for sub in subs:
+        print(f'\nSTART SUB {sub}')
 
-        rawAccData(
-            sub=sys.argv[1],
-            state=sys.argv[2],
-            uncut_path=uncut_path,
-        )
-
-
-
+        for state in ['M0S0', 'M0S1', 'M1S0', 'M1S1']:
+            print(f'\n\tSTART {state}')
+            try:
+                rawAccData(
+                    sub=sub,
+                    state=state,
+                    uncut_path=uncut_path,
+                    switched_sides=cfg['side_switch'],
+                )
+            except FileNotFoundError:
+                print(f'\t{state} not present for sub{sub}')
 
 
 
