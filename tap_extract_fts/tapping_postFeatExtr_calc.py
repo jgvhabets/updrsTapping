@@ -194,6 +194,29 @@ def nan_array(dim: list):
     return arr
 
 
+def get_means_std_errs(score_lists):
+    """
+    used to plot feature course over time (figure 3)
+    """
+    mean_dict, err_dict = {}, {}
+
+    for score in score_lists.keys():
+        # get maximum array length for score and create empty nan array
+        max_len = max([len(l) for l in score_lists[score]])
+        values = np.array([[np.nan] * max_len] * len(score_lists[score]))
+        # fill array with value scores per trace (list)
+        for i, l in enumerate(score_lists[score]):
+            values[i, :len(l)] = l
+        # calculate mean value per observations (1st, 2nd, 3rd, etc)
+        mean = np.nanmean(values, axis=0)
+        mean_dict[score] = mean
+        # calculate std-error (defaults to zero if no std dev/err (only 1 value))
+        sd = np.nanstd(values, axis=0)
+        n_obs = np.array([sum(~np.isnan(values[:, i])) for i in range(values.shape[1])])
+        errs = sd / np.sqrt(n_obs)  # std-err = std-dev / sqrt(data-size)
+        err_dict[score] = errs
+    
+    return mean_dict, err_dict
 
 # ### SMOOTHING FUNCTION WITH NP.CONVOLVE
 
