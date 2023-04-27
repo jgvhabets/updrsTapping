@@ -53,7 +53,7 @@ USE_MODEL_DATE = '20230404'
 SAVE_TRAINED_MODEL = True
 TO_PLOT = True
 TO_SAVE_FIG = True
-TO_PERFORM_PERM = True
+TO_PERFORM_PERM = False
 ADD_FIG_PATH = 'v2'  # None saves figs in figures/prediction
 # v2: excl FOURS; v3: EXCL-FOURS and without fewTaps
 
