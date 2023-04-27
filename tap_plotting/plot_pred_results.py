@@ -40,7 +40,7 @@ def plot_confMatrix_scatter(
         jitt = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
         jitt2 = np.random.uniform(low=-.2, high=0.2, size=len(y_true))
         axes[0].scatter(y_pred+jitt2, y_true+jitt,
-                        alpha=.2, s=100,)
+                        alpha=.2, s=100, )
     
     if plot_box or plot_violin:
         
@@ -65,7 +65,7 @@ def plot_confMatrix_scatter(
             viol_parts = axes[0].violinplot(box_lists, positions=range(4),
                             showmeans=True, showextrema=False,
                                 showmedians=False,)
-            viol_parts['cmeans'].set_facecolor('firebrick')
+            viol_parts['cmeans'].set_facecolor('dodgerblue')
             viol_parts['cmeans'].set_linewidth(3)
             viol_parts['cmeans'].set_alpha(.8)
 
@@ -146,6 +146,7 @@ from scipy.stats import pearsonr, spearmanr
 def plot_indiv_Rs_holdout(
     ax, y_true_list, y_pred_list, trace_ids_list,
     subs_in_holdout, fs=14, r_method=pearsonr,
+    color_per_center=False,
     BER_clr='purple', DUS_clr='darkgreen',
 ):
     (sub_Rs,
@@ -168,12 +169,16 @@ def plot_indiv_Rs_holdout(
     for i, s in enumerate(sub_ids):
         if isinstance(sub_Rs[i], float) and ~np.isnan(sub_Rs[i]):
             plot_Rs.append(sub_Rs[i])
-            if s[:3] == 'BER':
-                hatch='//'
-                clr=BER_clr
-            elif s[:3] == 'DUS':
-                    hatch=''
-                    clr=DUS_clr
+            if color_per_center:
+                if s[:3] == 'BER':
+                    hatch='//'
+                    clr=BER_clr
+                elif s[:3] == 'DUS':
+                        hatch=''
+                        clr=DUS_clr
+            else:
+                hatch=''
+                clr='royalblue'
             ax.scatter(x_jitt[i], sub_Rs[i], s=sub_samples[i]*25,
                        color=clr, edgecolor=None,
                        alpha=.5, hatch=hatch, )
@@ -197,14 +202,18 @@ def plot_indiv_Rs_holdout(
     ax.set_yticklabels(['-1', '-0.5', '0', '0.5', '1'], size=fs,)
     ax.set_ylim(-1.5, 1.1)
     ax.set_xticks([], size=fs)
-    ax.scatter(2, 2, s=300, hatch='//', alpha=.5,
-           color=BER_clr, label='BER')
-    ax.scatter(2, 2, s=300, hatch='', alpha=.5,
-           color=DUS_clr, label='DUS')
+    # ax.scatter(2, 2, s=300, hatch='//', alpha=.5,
+    #        color=BER_clr, label='BER')
+    # ax.scatter(2, 2, s=300, hatch='', alpha=.5,
+    #        color=DUS_clr, label='DUS')
+    # ax.scatter(2, 2, s=10*25, alpha=.7,
+    #        color='darkgray', label='n=10')
+    # ax.scatter(2, 2, s=20*25, alpha=.7,
+    #        color='darkgray', label='n=20')
     ax.scatter(2, 2, s=10*25, alpha=.7,
-           color='darkgray', label='n=10')
+           color='royalblue', label='n=10')
     ax.scatter(2, 2, s=20*25, alpha=.7,
-           color='darkgray', label='n=20')
+           color='royalblue', label='n=20')
     
     ax.legend(frameon=True, ncol=1, fontsize=fs-4,
               loc='lower right',)
